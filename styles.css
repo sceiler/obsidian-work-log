@@ -2,6 +2,8 @@
 
 .work-log-modal {
 	padding: 1rem;
+	width: 600px;
+	max-width: 90vw;
 }
 
 .work-log-modal h2 {
@@ -143,7 +145,10 @@
 }
 
 .work-log-modal textarea {
-	font-family: var(--font-text);
+	font-family: var(--font-monospace);
+	font-size: 0.9rem;
+	line-height: 1.5;
+	white-space: pre-wrap;
 }
 
 /* Settings page category reference */

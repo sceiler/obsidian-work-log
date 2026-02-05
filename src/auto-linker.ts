@@ -102,19 +102,26 @@ export class AutoLinker extends Component {
 
 	/**
 	 * Process text and add wiki links for known note names.
-	 * Preserves existing [[links]] and doesn't double-link.
+	 * Preserves existing [[links]], URLs, and doesn't double-link.
 	 */
 	processText(text: string): string {
 		if (!text || this.sortedNames.length === 0) {
 			return text;
 		}
 
-		let result = text;
+		// Extract URLs and replace with placeholders to protect them from auto-linking
+		const urlPattern = /https?:\/\/[^\s<>[\]]+/gi;
+		const urls: string[] = [];
+		let protectedText = text.replace(urlPattern, (match) => {
+			urls.push(match);
+			return `__URL_PLACEHOLDER_${urls.length - 1}__`;
+		});
 
+		// Now apply auto-linking to the protected text
 		for (const noteName of this.sortedNames) {
 			// Skip if this exact name is already linked somewhere
 			const linkedPattern = new RegExp(`\\[\\[${this.escapeRegex(noteName)}(\\|[^\\]]*)?\\]\\]`, 'i');
-			if (linkedPattern.test(result)) continue;
+			if (linkedPattern.test(protectedText)) continue;
 
 			// Find the note name as a whole word (case-insensitive)
 			// Negative lookbehind: not preceded by [[ or word char
@@ -126,7 +133,7 @@ export class AutoLinker extends Component {
 
 			// Replace with wiki link, preserving original case from vault
 			const originalName = this.noteNamesLower.get(noteName.toLowerCase()) || noteName;
-			result = result.replace(pattern, (match) => {
+			protectedText = protectedText.replace(pattern, (match) => {
 				// If match case differs from note name, use alias syntax
 				if (match !== originalName) {
 					return `[[${originalName}|${match}]]`;
@@ -134,6 +141,11 @@ export class AutoLinker extends Component {
 				return `[[${originalName}]]`;
 			});
 		}
+
+		// Restore URLs
+		const result = protectedText.replace(/__URL_PLACEHOLDER_(\d+)__/g, (_, index) => {
+			return urls[parseInt(index, 10)];
+		});
 
 		return result;
 	}
