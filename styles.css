@@ -2,8 +2,12 @@
 
 /* Target the modal container for width */
 .work-log-modal-container {
-	width: 800px;
+	width: 900px;
 	max-width: 95vw;
+}
+
+.work-log-modal-container .modal-content {
+	width: 100%;
 }
 
 .work-log-modal {
@@ -89,9 +93,10 @@
 
 /* Description Field */
 .work-log-description {
-	width: 100%;
-	min-height: 100px;
+	width: 100% !important;
+	min-height: 120px;
 	resize: vertical;
+	box-sizing: border-box;
 }
 
 .work-log-description.work-log-error {
@@ -146,6 +151,20 @@
 .work-log-modal .setting-item-control input[type="text"],
 .work-log-modal .setting-item-control select {
 	width: 200px;
+}
+
+/* Make description setting full width */
+.work-log-modal .setting-item:has(.work-log-description) {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.work-log-modal .setting-item:has(.work-log-description) .setting-item-control {
+	width: 100%;
+}
+
+.work-log-modal .setting-item:has(.work-log-description) textarea {
+	width: 100% !important;
 }
 
 .work-log-modal textarea {
