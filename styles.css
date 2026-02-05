@@ -1,0 +1,194 @@
+/* Work Log Plugin Styles */
+
+.work-log-modal {
+	padding: 1rem;
+}
+
+.work-log-modal h2 {
+	margin-bottom: 1.5rem;
+}
+
+/* Date Section */
+.work-log-date-section {
+	margin-bottom: 1rem;
+	padding: 1rem;
+	background: var(--background-secondary);
+	border-radius: 8px;
+}
+
+.work-log-date-label {
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+	color: var(--text-normal);
+}
+
+.work-log-date-row {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.work-log-quick-dates {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.work-log-date-btn {
+	padding: 0.25rem 0.75rem;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	border: none;
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: background 0.15s ease;
+}
+
+.work-log-date-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.work-log-date-btn-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.work-log-date-btn-active:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.work-log-date-input {
+	padding: 0.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.work-log-date-display {
+	margin-top: 0.75rem;
+	color: var(--text-muted);
+	font-size: 0.9rem;
+}
+
+/* Category Description */
+.work-log-category-desc {
+	color: var(--text-muted);
+	font-size: 0.85rem;
+	margin-top: -0.5rem;
+	margin-bottom: 1rem;
+	padding-left: 0.5rem;
+	border-left: 2px solid var(--background-modifier-border);
+}
+
+/* Description Field */
+.work-log-description {
+	width: 100%;
+	min-height: 100px;
+	resize: vertical;
+}
+
+.work-log-description.work-log-error {
+	border-color: var(--text-error) !important;
+	animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+	0%, 100% { transform: translateX(0); }
+	25% { transform: translateX(-5px); }
+	75% { transform: translateX(5px); }
+}
+
+/* Auto-link note */
+.work-log-autolink-note {
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	margin-top: 0.25rem;
+	font-style: italic;
+}
+
+/* Buttons */
+.work-log-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	margin-top: 1.5rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.work-log-buttons button {
+	padding: 0.5rem 1.25rem;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+/* Settings */
+.work-log-modal .setting-item {
+	border-top: none;
+	padding: 0.75rem 0;
+}
+
+.work-log-modal .setting-item-info {
+	flex: 1;
+}
+
+.work-log-modal .setting-item-control {
+	flex-shrink: 0;
+}
+
+.work-log-modal .setting-item-control input[type="text"],
+.work-log-modal .setting-item-control select {
+	width: 200px;
+}
+
+.work-log-modal textarea {
+	font-family: var(--font-text);
+}
+
+/* Settings page category reference */
+.work-log-category-reference {
+	padding: 0.5rem;
+}
+
+.work-log-category-item {
+	padding: 0.25rem 0;
+	font-size: 0.9rem;
+}
+
+.work-log-category-item strong {
+	color: var(--text-normal);
+}
+
+.work-log-category-item span {
+	color: var(--text-muted);
+}
+
+/* Related Note Field */
+.work-log-related-note-input {
+	width: 100%;
+}
+
+.work-log-related-note-info {
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	margin-top: 0.25rem;
+	margin-bottom: 1rem;
+	font-style: italic;
+}
+
+/* Suggest Dropdown */
+.work-log-suggest-item {
+	padding: 0.5rem 0.75rem;
+}
+
+.work-log-suggest-name {
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.work-log-suggest-path {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	margin-top: 0.15rem;
+}

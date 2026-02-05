@@ -1,0 +1,10 @@
+{
+	"id": "work-log",
+	"name": "Work Log",
+	"version": "1.0.0",
+	"minAppVersion": "1.6.6",
+	"description": "Track daily work activities, achievements, and contributions for performance reviews",
+	"author": "Yi Min Yang",
+	"authorUrl": "https://www.yiminyang.dev/",
+	"isDesktopOnly": false
+}
