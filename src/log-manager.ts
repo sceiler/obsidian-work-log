@@ -1,5 +1,5 @@
 import { App, TFile, moment } from 'obsidian';
-import { CATEGORY_LABELS, type LogEntry, type WorkLogSettings } from './types';
+import { getCategoryLabel, type LogEntry, type WorkLogSettings } from './types';
 
 export class LogManager {
 	private app: App;
@@ -324,7 +324,7 @@ export class LogManager {
 	 * Format entry for main work log
 	 */
 	private formatLogEntry(entry: LogEntry): string {
-		const categoryLabel = CATEGORY_LABELS[entry.category];
+		const categoryLabel = getCategoryLabel(this.settings.categories, entry.category);
 		const showCategory = this.settings.showCategoryInLog;
 		const description = this.formatMultiLineDescription(entry.description);
 
@@ -375,7 +375,7 @@ export class LogManager {
 		const description = this.formatMultiLineDescription(entry.description);
 
 		if (this.settings.showCategoryInRelatedNote) {
-			const categoryLabel = CATEGORY_LABELS[entry.category];
+			const categoryLabel = getCategoryLabel(this.settings.categories, entry.category);
 			if (this.settings.showTimestamps) {
 				const time = moment(entry.timestamp).format('HH:mm');
 				return `**${categoryLabel}** (${time}): ${description}`;

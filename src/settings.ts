@@ -1,6 +1,6 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type WorkLogPlugin from './main';
-import { CATEGORY_LABELS, CATEGORY_DESCRIPTIONS, type Category } from './types';
+import { type CategoryConfig } from './types';
 
 export class WorkLogSettingTab extends PluginSettingTab {
 	plugin: WorkLogPlugin;
@@ -48,13 +48,12 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.setName('Default category')
 			.setDesc('Pre-selected category when adding new entries')
 			.addDropdown(dropdown => {
-				const categories: Category[] = ['demo', 'customer', 'technical', 'collaboration', 'win'];
-				categories.forEach(cat => {
-					dropdown.addOption(cat, `${CATEGORY_LABELS[cat]}`);
-				});
+				for (const cat of this.plugin.settings.categories) {
+					dropdown.addOption(cat.id, cat.label);
+				}
 				dropdown.setValue(this.plugin.settings.defaultCategory);
 				dropdown.onChange(async (value) => {
-					this.plugin.settings.defaultCategory = value as Category;
+					this.plugin.settings.defaultCategory = value;
 					await this.plugin.saveSettings();
 				});
 			});
@@ -186,16 +185,211 @@ export class WorkLogSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// ============ CATEGORY REFERENCE ============
-		containerEl.createEl('h2', { text: 'Category Reference' });
+		// ============ CATEGORIES ============
+		containerEl.createEl('h2', { text: 'Categories' });
 
-		const categoryList = containerEl.createEl('div', { cls: 'work-log-category-reference' });
-		const categories: Category[] = ['demo', 'customer', 'technical', 'collaboration', 'win'];
+		new Setting(containerEl)
+			.setDesc('Add, edit, reorder, or remove categories. Changes also update quick-add commands.')
+			.addButton(btn => btn
+				.setButtonText('Add Category')
+				.setCta()
+				.onClick(() => {
+					this.showAddCategoryForm(containerEl);
+				}));
 
-		for (const cat of categories) {
-			const item = categoryList.createEl('div', { cls: 'work-log-category-item' });
-			item.createEl('strong', { text: CATEGORY_LABELS[cat] });
-			item.createEl('span', { text: ` — ${CATEGORY_DESCRIPTIONS[cat]}` });
+		const categoriesContainer = containerEl.createDiv();
+		this.renderCategoryList(categoriesContainer);
+	}
+
+	private renderCategoryList(container: HTMLElement): void {
+		container.empty();
+		const categories = this.plugin.settings.categories;
+
+		for (let i = 0; i < categories.length; i++) {
+			const cat = categories[i];
+			const isDefault = cat.id === this.plugin.settings.defaultCategory;
+
+			const catContainer = container.createDiv({ cls: 'work-log-category-container' });
+
+			const setting = new Setting(catContainer)
+				.setName(cat.label + (isDefault ? ' (default)' : ''))
+				.setDesc(cat.description);
+
+			// Move up
+			if (i > 0) {
+				setting.addExtraButton(btn => btn
+					.setIcon('arrow-up')
+					.setTooltip('Move up')
+					.onClick(async () => {
+						[categories[i - 1], categories[i]] = [categories[i], categories[i - 1]];
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+			}
+
+			// Move down
+			if (i < categories.length - 1) {
+				setting.addExtraButton(btn => btn
+					.setIcon('arrow-down')
+					.setTooltip('Move down')
+					.onClick(async () => {
+						[categories[i], categories[i + 1]] = [categories[i + 1], categories[i]];
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+			}
+
+			// Set as default
+			if (!isDefault) {
+				setting.addExtraButton(btn => btn
+					.setIcon('star')
+					.setTooltip('Set as default')
+					.onClick(async () => {
+						this.plugin.settings.defaultCategory = cat.id;
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+			}
+
+			// Edit
+			setting.addExtraButton(btn => btn
+				.setIcon('pencil')
+				.setTooltip('Edit category')
+				.onClick(() => {
+					this.showEditCategoryForm(catContainer, i);
+				}));
+
+			// Delete (only if more than 1 category)
+			if (categories.length > 1) {
+				setting.addExtraButton(btn => btn
+					.setIcon('trash')
+					.setTooltip('Delete category')
+					.onClick(async () => {
+						const removedId = categories[i].id;
+						categories.splice(i, 1);
+						if (this.plugin.settings.defaultCategory === removedId) {
+							this.plugin.settings.defaultCategory = categories[0].id;
+						}
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+			}
 		}
+	}
+
+	private showEditCategoryForm(container: HTMLElement, index: number): void {
+		const cat = this.plugin.settings.categories[index];
+		container.empty();
+
+		container.createEl('h3', { text: `Editing: ${cat.label}` });
+
+		new Setting(container)
+			.setName('ID')
+			.setDesc('Internal identifier (cannot be changed)')
+			.addText(text => {
+				text.setValue(cat.id);
+				text.setDisabled(true);
+			});
+
+		new Setting(container)
+			.setName('Label')
+			.setDesc('Display name shown in dropdowns and entries')
+			.addText(text => text
+				.setValue(cat.label)
+				.onChange(value => { cat.label = value; }));
+
+		new Setting(container)
+			.setName('Description')
+			.setDesc('Help text shown below the category dropdown')
+			.addText(text => text
+				.setValue(cat.description)
+				.onChange(value => { cat.description = value; }));
+
+		new Setting(container)
+			.setName('Placeholder')
+			.setDesc('Example text shown in the description field')
+			.addText(text => text
+				.setValue(cat.placeholder)
+				.onChange(value => { cat.placeholder = value; }));
+
+		new Setting(container)
+			.addButton(btn => btn
+				.setButtonText('Save')
+				.setCta()
+				.onClick(async () => {
+					if (!cat.label.trim()) {
+						new Notice('Label is required');
+						return;
+					}
+					await this.plugin.saveSettings();
+					this.display();
+				}))
+			.addButton(btn => btn
+				.setButtonText('Cancel')
+				.onClick(() => {
+					this.display();
+				}));
+	}
+
+	private showAddCategoryForm(parentEl: HTMLElement): void {
+		// Remove existing add form if any
+		const existing = parentEl.querySelector('.work-log-add-category-form');
+		if (existing) {
+			existing.remove();
+			return;
+		}
+
+		const formEl = parentEl.createDiv({ cls: 'work-log-add-category-form' });
+
+		const newCat: CategoryConfig = { id: '', label: '', description: '', placeholder: '' };
+
+		new Setting(formEl)
+			.setName('ID')
+			.setDesc('Unique identifier (lowercase letters, numbers, hyphens)')
+			.addText(text => text
+				.setPlaceholder('e.g., meeting')
+				.onChange(value => { newCat.id = value.toLowerCase().replace(/[^a-z0-9-]/g, ''); }));
+
+		new Setting(formEl)
+			.setName('Label')
+			.setDesc('Display name')
+			.addText(text => text
+				.setPlaceholder('e.g., Meeting')
+				.onChange(value => { newCat.label = value; }));
+
+		new Setting(formEl)
+			.setName('Description')
+			.addText(text => text
+				.setPlaceholder('e.g., Team meetings, standups, 1:1s')
+				.onChange(value => { newCat.description = value; }));
+
+		new Setting(formEl)
+			.setName('Placeholder')
+			.addText(text => text
+				.setPlaceholder('e.g., Led sprint planning for Q3 release')
+				.onChange(value => { newCat.placeholder = value; }));
+
+		new Setting(formEl)
+			.addButton(btn => btn
+				.setButtonText('Add')
+				.setCta()
+				.onClick(async () => {
+					if (!newCat.id || !newCat.label.trim()) {
+						new Notice('ID and Label are required');
+						return;
+					}
+					if (this.plugin.settings.categories.some(c => c.id === newCat.id)) {
+						new Notice(`Category with ID "${newCat.id}" already exists`);
+						return;
+					}
+					this.plugin.settings.categories.push({ ...newCat });
+					await this.plugin.saveSettings();
+					this.display();
+				}))
+			.addButton(btn => btn
+				.setButtonText('Cancel')
+				.onClick(() => {
+					this.display();
+				}));
 	}
 }

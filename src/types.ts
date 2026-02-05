@@ -1,5 +1,11 @@
-// Categories tailored for Sales Engineer role
-export type Category = 'demo' | 'customer' | 'technical' | 'collaboration' | 'win';
+export type Category = string;
+
+export interface CategoryConfig {
+	id: string;
+	label: string;
+	description: string;
+	placeholder: string;
+}
 
 export interface LogEntry {
 	date: string;           // YYYY-MM-DD format
@@ -16,6 +22,7 @@ export interface WorkLogSettings {
 
 	// Entry settings
 	defaultCategory: Category;
+	categories: CategoryConfig[];
 	showTimestamps: boolean;
 	showCategoryInLog: boolean;
 	showCategoryInRelatedNote: boolean;
@@ -37,6 +44,39 @@ export interface WorkLogSettings {
 	separateEntriesWithBlankLine: boolean;
 }
 
+export const DEFAULT_CATEGORIES: CategoryConfig[] = [
+	{
+		id: 'demo',
+		label: 'Demo',
+		description: 'Customer demos, presentations, workshops',
+		placeholder: 'Delivered Next.js migration demo to Acme Corp',
+	},
+	{
+		id: 'customer',
+		label: 'Customer',
+		description: 'Calls, support, follow-ups, relationships',
+		placeholder: 'Helped John Doe troubleshoot deployment issue',
+	},
+	{
+		id: 'technical',
+		label: 'Technical',
+		description: 'POCs, integrations, troubleshooting, docs',
+		placeholder: 'Built POC for edge middleware integration',
+	},
+	{
+		id: 'collaboration',
+		label: 'Collaboration',
+		description: 'Helping teammates, internal meetings, cross-team work',
+		placeholder: 'Reviewed Sarah\'s demo script, shared feedback',
+	},
+	{
+		id: 'win',
+		label: 'Win',
+		description: 'Deals closed, achievements, milestones, metrics',
+		placeholder: 'Closed deal with Acme Corp - $50k ARR',
+	},
+];
+
 export const DEFAULT_SETTINGS: WorkLogSettings = {
 	// File settings
 	logFilePath: 'work-log.md',
@@ -44,6 +84,7 @@ export const DEFAULT_SETTINGS: WorkLogSettings = {
 
 	// Entry settings
 	defaultCategory: 'customer',
+	categories: DEFAULT_CATEGORIES,
 	showTimestamps: false,
 	showCategoryInLog: true,
 	showCategoryInRelatedNote: false,
@@ -65,29 +106,10 @@ export const DEFAULT_SETTINGS: WorkLogSettings = {
 	separateEntriesWithBlankLine: true,
 };
 
-// Labels shown in UI and log entries
-export const CATEGORY_LABELS: Record<Category, string> = {
-	demo: 'Demo',
-	customer: 'Customer',
-	technical: 'Technical',
-	collaboration: 'Collaboration',
-	win: 'Win',
-};
+export function getCategoryConfig(categories: CategoryConfig[], id: string): CategoryConfig | undefined {
+	return categories.find(c => c.id === id);
+}
 
-// Descriptions for each category (shown in dropdown)
-export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
-	demo: 'Customer demos, presentations, workshops',
-	customer: 'Calls, support, follow-ups, relationships',
-	technical: 'POCs, integrations, troubleshooting, docs',
-	collaboration: 'Helping teammates, internal meetings, cross-team work',
-	win: 'Deals closed, achievements, milestones, metrics',
-};
-
-// Placeholder examples for each category
-export const CATEGORY_PLACEHOLDERS: Record<Category, string> = {
-	demo: 'Delivered Next.js migration demo to Acme Corp',
-	customer: 'Helped John Doe troubleshoot deployment issue',
-	technical: 'Built POC for edge middleware integration',
-	collaboration: 'Reviewed Sarah\'s demo script, shared feedback',
-	win: 'Closed deal with Acme Corp - $50k ARR',
-};
+export function getCategoryLabel(categories: CategoryConfig[], id: string): string {
+	return getCategoryConfig(categories, id)?.label ?? id;
+}

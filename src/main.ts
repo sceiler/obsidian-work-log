@@ -1,5 +1,5 @@
 import { Notice, Plugin } from 'obsidian';
-import { DEFAULT_SETTINGS, CATEGORY_LABELS, type Category, type LogEntry, type WorkLogSettings } from './types';
+import { DEFAULT_SETTINGS, DEFAULT_CATEGORIES, getCategoryLabel, type Category, type LogEntry, type WorkLogSettings } from './types';
 import { WorkLogSettingTab } from './settings';
 import { LogManager } from './log-manager';
 import { EntryModal } from './entry-modal';
@@ -9,6 +9,7 @@ export default class WorkLogPlugin extends Plugin {
 	settings: WorkLogSettings;
 	private logManager: LogManager;
 	private autoLinker: AutoLinker;
+	private registeredCategoryCommandIds: Set<string> = new Set();
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -42,20 +43,30 @@ export default class WorkLogPlugin extends Plugin {
 			}
 		});
 
-		// Quick add commands for each category
-		const categories: Category[] = ['demo', 'customer', 'technical', 'collaboration', 'win'];
-		for (const category of categories) {
-			this.addCommand({
-				id: `quick-${category}`,
-				name: `Quick add: ${CATEGORY_LABELS[category]}`,
-				callback: () => {
-					this.openEntryModal(category);
-				}
-			});
-		}
+		// Register quick add commands for each category
+		this.registerCategoryCommands();
 
 		// Add settings tab
 		this.addSettingTab(new WorkLogSettingTab(this.app, this));
+	}
+
+	private registerCategoryCommands(): void {
+		for (const cmdId of this.registeredCategoryCommandIds) {
+			this.removeCommand(cmdId);
+		}
+		this.registeredCategoryCommandIds.clear();
+
+		for (const cat of this.settings.categories) {
+			const cmdId = `quick-${cat.id}`;
+			this.addCommand({
+				id: cmdId,
+				name: `Quick add: ${cat.label}`,
+				callback: () => {
+					this.openEntryModal(cat.id);
+				}
+			});
+			this.registeredCategoryCommandIds.add(cmdId);
+		}
 	}
 
 	private openEntryModal(presetCategory?: Category): void {
@@ -79,17 +90,19 @@ export default class WorkLogPlugin extends Plugin {
 			// Always add to main work log
 			await this.logManager.addEntry(entry);
 
+			const label = getCategoryLabel(this.settings.categories, entry.category);
+
 			// Also add to related note if specified
 			if (entry.relatedNote) {
 				try {
 					await this.logManager.addToRelatedNote(entry.relatedNote, entry);
-					new Notice(`Added ${CATEGORY_LABELS[entry.category]} to work log and [[${entry.relatedNote}]]`);
+					new Notice(`Added ${label} to work log and [[${entry.relatedNote}]]`);
 				} catch (relatedError) {
 					console.error('Failed to add to related note:', relatedError);
 					new Notice(`Added to work log, but failed to add to [[${entry.relatedNote}]]: ${relatedError}`);
 				}
 			} else {
-				new Notice(`Added ${CATEGORY_LABELS[entry.category]} entry for ${entry.date}`);
+				new Notice(`Added ${label} entry for ${entry.date}`);
 			}
 		} catch (error) {
 			console.error('Failed to add entry:', error);
@@ -99,10 +112,21 @@ export default class WorkLogPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+		// Migration: ensure categories array exists
+		if (!this.settings.categories || this.settings.categories.length === 0) {
+			this.settings.categories = DEFAULT_CATEGORIES;
+		}
+
+		// Ensure defaultCategory references a valid category
+		if (!this.settings.categories.some(c => c.id === this.settings.defaultCategory)) {
+			this.settings.defaultCategory = this.settings.categories[0].id;
+		}
 	}
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 		this.logManager.updateSettings(this.settings);
+		this.registerCategoryCommands();
 	}
 }

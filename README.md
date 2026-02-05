@@ -18,13 +18,13 @@ Access via the ribbon icon or Command Palette (`Work Log: Add work log entry`):
 
 - **Related Note Field**: Autocomplete search for existing notes - type to find people, projects, or organizations
 - **Date Selection**: Today (default), Yesterday, Last Friday, or pick any date
-- **Category Selection**: Categorize your work (Demo, Customer, Technical, Collaboration, Win)
+- **Category Selection**: Categorize your work with fully customizable categories
 - **Description**: Free-form text with automatic wiki-link detection
 - **Keyboard Shortcuts**: `Cmd/Ctrl+Enter` to submit, `Escape` to cancel
 
 ### Categories
 
-Tailored for professional roles (especially Sales Engineering):
+Fully configurable via Settings → Categories. Add, edit, reorder, or remove categories to match your workflow. Default categories tailored for Sales Engineering:
 
 | Category | Description |
 |----------|-------------|
@@ -33,6 +33,8 @@ Tailored for professional roles (especially Sales Engineering):
 | **Technical** | POCs, integrations, troubleshooting, documentation |
 | **Collaboration** | Helping teammates, internal meetings, cross-team work |
 | **Win** | Deals closed, achievements, milestones, metrics |
+
+Each category has a label, description, and placeholder text that you can customize. Reorder categories to control the dropdown order in the entry modal. Quick-add commands automatically update when you modify categories.
 
 ### Output Format
 
@@ -136,17 +138,25 @@ Access settings via Settings → Work Log.
 |---------|---------|-------------|
 | Enable auto-linking | `true` | Convert note names to `[[wiki links]]` |
 
+### Categories
+
+Manage your categories in Settings → Work Log → Categories:
+
+- **Add**: Create new categories with a unique ID, label, description, and placeholder
+- **Edit**: Modify label, description, and placeholder for any category
+- **Reorder**: Move categories up/down to control dropdown order
+- **Delete**: Remove categories (at least one must remain)
+- **Set Default**: Mark any category as the default for new entries
+
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `Work Log: Add work log entry` | Open the entry modal |
 | `Work Log: Open work log` | Open the work log file |
-| `Work Log: Quick add: Demo` | Open modal with Demo pre-selected |
-| `Work Log: Quick add: Customer` | Open modal with Customer pre-selected |
-| `Work Log: Quick add: Technical` | Open modal with Technical pre-selected |
-| `Work Log: Quick add: Collaboration` | Open modal with Collaboration pre-selected |
-| `Work Log: Quick add: Win` | Open modal with Win pre-selected |
+| `Work Log: Quick add: <Category>` | Open modal with a category pre-selected |
+
+A quick-add command is automatically registered for each configured category. When you add, remove, or rename categories in settings, the commands update accordingly.
 
 ## How It Works
 

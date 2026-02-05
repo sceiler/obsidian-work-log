@@ -223,3 +223,29 @@
 	color: var(--text-muted);
 	margin-top: 0.15rem;
 }
+
+/* Category management in settings */
+.work-log-category-container {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.work-log-category-container .setting-item {
+	border-top: none;
+	padding: 0.25rem 0;
+}
+
+.work-log-add-category-form {
+	border: 1px solid var(--interactive-accent);
+	border-radius: 6px;
+	padding: 0.75rem;
+	margin-top: 0.5rem;
+	background: var(--background-secondary);
+}
+
+.work-log-add-category-form .setting-item {
+	border-top: none;
+	padding: 0.25rem 0;
+}

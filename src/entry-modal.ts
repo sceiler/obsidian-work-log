@@ -1,8 +1,6 @@
 import { App, Modal, Setting, moment, TextAreaComponent, DropdownComponent } from 'obsidian';
 import {
-	CATEGORY_LABELS,
-	CATEGORY_DESCRIPTIONS,
-	CATEGORY_PLACEHOLDERS,
+	getCategoryConfig,
 	type Category,
 	type LogEntry,
 	type WorkLogSettings
@@ -56,19 +54,20 @@ export class EntryModal extends Modal {
 			.setName('Category');
 
 		const categoryDesc = contentEl.createDiv({ cls: 'work-log-category-desc' });
-		categoryDesc.setText(CATEGORY_DESCRIPTIONS[this.selectedCategory]);
+		const initialConfig = getCategoryConfig(this.settings.categories, this.selectedCategory);
+		categoryDesc.setText(initialConfig?.description ?? '');
 
 		categorySetting.addDropdown((dropdown: DropdownComponent) => {
-			const categories: Category[] = ['demo', 'customer', 'technical', 'collaboration', 'win'];
-			categories.forEach(cat => {
-				dropdown.addOption(cat, CATEGORY_LABELS[cat]);
-			});
+			for (const cat of this.settings.categories) {
+				dropdown.addOption(cat.id, cat.label);
+			}
 			dropdown.setValue(this.selectedCategory);
 			dropdown.onChange((value: string) => {
 				this.selectedCategory = value as Category;
-				categoryDesc.setText(CATEGORY_DESCRIPTIONS[this.selectedCategory]);
+				const config = getCategoryConfig(this.settings.categories, this.selectedCategory);
+				categoryDesc.setText(config?.description ?? '');
 				if (this.descriptionEl) {
-					this.descriptionEl.setPlaceholder(CATEGORY_PLACEHOLDERS[this.selectedCategory]);
+					this.descriptionEl.setPlaceholder(config?.placeholder ?? '');
 				}
 			});
 		});
@@ -79,7 +78,8 @@ export class EntryModal extends Modal {
 			.setDesc('What did you accomplish? Note names will be auto-linked.')
 			.addTextArea((text: TextAreaComponent) => {
 				this.descriptionEl = text;
-				text.setPlaceholder(CATEGORY_PLACEHOLDERS[this.selectedCategory]);
+				const catConfig = getCategoryConfig(this.settings.categories, this.selectedCategory);
+				text.setPlaceholder(catConfig?.placeholder ?? '');
 				text.inputEl.rows = 5;
 				text.inputEl.addClass('work-log-description');
 				text.onChange((value: string) => {

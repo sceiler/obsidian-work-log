@@ -5,6 +5,24 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-05
+
+### Added
+- **Configurable Categories**: Categories are now fully customizable via Settings → Categories
+  - Add new categories with custom ID, label, description, and placeholder
+  - Edit existing category labels, descriptions, and placeholders
+  - Reorder categories with up/down buttons (controls dropdown order)
+  - Delete categories (minimum one required)
+  - Set any category as the default
+- **Dynamic Quick-Add Commands**: Quick-add commands in the command palette automatically update when categories are added, removed, or renamed
+- **Category Migration**: Existing installations seamlessly migrate to the new configurable system with the same five default categories
+
+### Changed
+- Categories are now stored in plugin settings as an ordered array instead of hardcoded constants
+- The `Category` type is now a `string` instead of a fixed union type, enabling user-defined categories
+
+---
+
 ## [1.0.2] - 2026-02-05
 
 ### Fixed
@@ -110,7 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Future Plans
 
-- [ ] Custom categories configuration
+- [x] Custom categories configuration
 - [ ] Template support for entry formats
 - [ ] Weekly/monthly summary generation
 - [ ] Export to various formats
