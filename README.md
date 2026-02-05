@@ -70,7 +70,7 @@ Follow-up call about new feature request
 
 ### Manual Installation
 
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/yiminyang/work-log/releases)
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/sceiler/obsidian-work-log/releases)
 2. Create folder: `<vault>/.obsidian/plugins/work-log/`
 3. Copy the downloaded files into the folder
 4. Reload Obsidian
@@ -79,7 +79,7 @@ Follow-up call about new feature request
 ### Development Installation
 
 ```bash
-git clone https://github.com/yiminyang/work-log.git
+git clone https://github.com/sceiler/obsidian-work-log.git
 cd work-log
 npm install
 npm run build
@@ -275,8 +275,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- [Report issues](https://github.com/yiminyang/work-log/issues)
-- [Request features](https://github.com/yiminyang/work-log/issues)
+- [Report issues](https://github.com/sceiler/obsidian-work-log/issues)
+- [Request features](https://github.com/sceiler/obsidian-work-log/issues)
 
 ## Acknowledgments
 
