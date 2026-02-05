@@ -5,6 +5,23 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-02-05
+
+### Changed
+- Updated to Node.js 24 (minimum required version)
+- Updated all dependencies to latest versions:
+  - @types/node ^24.0.0
+  - esbuild ^0.27.0
+  - eslint ^9.39.0
+  - typescript ^5.8.0
+  - typescript-eslint ^8.54.0
+- Migrated to ESLint 9 flat config format
+
+### Fixed
+- Removed unused imports and variables flagged by updated linter
+
+---
+
 ## [1.0.0] - 2026-02-05
 
 ### Added
