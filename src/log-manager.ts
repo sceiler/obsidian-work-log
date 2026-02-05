@@ -297,11 +297,36 @@ export class LogManager {
 	}
 
 	/**
+	 * Format multi-line description, indenting subsequent lines that start with list markers
+	 */
+	private formatMultiLineDescription(description: string): string {
+		const lines = description.split('\n');
+		if (lines.length === 1) {
+			return description;
+		}
+
+		// First line stays as-is, subsequent lines that start with - or * get indented
+		return lines.map((line, index) => {
+			if (index === 0) return line;
+			// If line starts with a list marker, indent it
+			if (/^\s*[-*]\s/.test(line)) {
+				return '  ' + line.trim();
+			}
+			// Other continuation lines get indented too
+			if (line.trim()) {
+				return '  ' + line.trim();
+			}
+			return '';
+		}).filter(line => line !== '' || lines.indexOf(line) === 0).join('\n');
+	}
+
+	/**
 	 * Format entry for main work log
 	 */
 	private formatLogEntry(entry: LogEntry): string {
 		const categoryLabel = CATEGORY_LABELS[entry.category];
 		const showCategory = this.settings.showCategoryInLog;
+		const description = this.formatMultiLineDescription(entry.description);
 
 		let line: string;
 
@@ -309,16 +334,16 @@ export class LogManager {
 			if (entry.relatedNote) {
 				if (this.settings.showTimestamps) {
 					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- **${categoryLabel}** ([[${entry.relatedNote}]], ${time}): ${entry.description}`;
+					line = `- **${categoryLabel}** ([[${entry.relatedNote}]], ${time}): ${description}`;
 				} else {
-					line = `- **${categoryLabel}** ([[${entry.relatedNote}]]): ${entry.description}`;
+					line = `- **${categoryLabel}** ([[${entry.relatedNote}]]): ${description}`;
 				}
 			} else {
 				if (this.settings.showTimestamps) {
 					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- **${categoryLabel}** (${time}): ${entry.description}`;
+					line = `- **${categoryLabel}** (${time}): ${description}`;
 				} else {
-					line = `- **${categoryLabel}**: ${entry.description}`;
+					line = `- **${categoryLabel}**: ${description}`;
 				}
 			}
 		} else {
@@ -326,16 +351,16 @@ export class LogManager {
 			if (entry.relatedNote) {
 				if (this.settings.showTimestamps) {
 					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- ([[${entry.relatedNote}]], ${time}): ${entry.description}`;
+					line = `- ([[${entry.relatedNote}]], ${time}): ${description}`;
 				} else {
-					line = `- ([[${entry.relatedNote}]]): ${entry.description}`;
+					line = `- ([[${entry.relatedNote}]]): ${description}`;
 				}
 			} else {
 				if (this.settings.showTimestamps) {
 					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- (${time}): ${entry.description}`;
+					line = `- (${time}): ${description}`;
 				} else {
-					line = `- ${entry.description}`;
+					line = `- ${description}`;
 				}
 			}
 		}
@@ -347,15 +372,17 @@ export class LogManager {
 	 * Format entry for related note
 	 */
 	private formatRelatedNoteEntry(entry: LogEntry): string {
+		const description = this.formatMultiLineDescription(entry.description);
+
 		if (this.settings.showCategoryInRelatedNote) {
 			const categoryLabel = CATEGORY_LABELS[entry.category];
 			if (this.settings.showTimestamps) {
 				const time = moment(entry.timestamp).format('HH:mm');
-				return `**${categoryLabel}** (${time}): ${entry.description}`;
+				return `**${categoryLabel}** (${time}): ${description}`;
 			}
-			return `**${categoryLabel}**: ${entry.description}`;
+			return `**${categoryLabel}**: ${description}`;
 		}
-		return entry.description;
+		return description;
 	}
 
 	async openLogFile(): Promise<void> {

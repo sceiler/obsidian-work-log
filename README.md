@@ -47,7 +47,13 @@ Tailored for professional roles (especially Sales Engineering):
 ## [[2024-02-06]]
 
 - **Win** ([[Big Client]]): Closed enterprise deal - $100k ARR
+
+- **Technical** ([[Project Alpha]]): Completed API integration
+  - Implemented OAuth2 flow
+  - Added rate limiting
 ```
+
+**Multi-line entries**: When you include list items (starting with `-`) in your description, they become properly nested sub-items.
 
 **Related Note** (e.g., `John Doe.md`):
 ```markdown

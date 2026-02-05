@@ -37,9 +37,10 @@ export class EntryModal extends Modal {
 	}
 
 	onOpen(): void {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass('work-log-modal');
+		modalEl.addClass('work-log-modal-container');
 
 		contentEl.createEl('h2', { text: 'Add Work Log Entry' });
 
@@ -79,7 +80,7 @@ export class EntryModal extends Modal {
 			.addTextArea((text: TextAreaComponent) => {
 				this.descriptionEl = text;
 				text.setPlaceholder(CATEGORY_PLACEHOLDERS[this.selectedCategory]);
-				text.inputEl.rows = 4;
+				text.inputEl.rows = 5;
 				text.inputEl.addClass('work-log-description');
 				text.onChange((value: string) => {
 					this.description = value;
