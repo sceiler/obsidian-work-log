@@ -80,7 +80,7 @@ export class EntryModal extends Modal {
 			.addTextArea((text: TextAreaComponent) => {
 				this.descriptionEl = text;
 				text.setPlaceholder(CATEGORY_PLACEHOLDERS[this.selectedCategory]);
-				text.inputEl.rows = 4;
+				text.inputEl.rows = 8;
 				text.inputEl.addClass('work-log-description');
 				text.onChange((value: string) => {
 					this.description = value;

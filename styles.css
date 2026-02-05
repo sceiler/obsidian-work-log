@@ -1,13 +1,17 @@
 /* Work Log Plugin Styles */
 
-/* Target the modal container for width */
+/* Target the modal container for size */
 .work-log-modal-container {
 	width: 900px;
 	max-width: 95vw;
+	height: 80vh;
+	max-height: 800px;
 }
 
 .work-log-modal-container .modal-content {
 	width: 100%;
+	height: 100%;
+	overflow-y: auto;
 }
 
 .work-log-modal {
@@ -94,7 +98,7 @@
 /* Description Field */
 .work-log-description {
 	width: 100% !important;
-	min-height: 120px;
+	min-height: 200px;
 	resize: vertical;
 	box-sizing: border-box;
 }
