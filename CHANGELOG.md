@@ -5,6 +5,19 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-02-05
+
+### Fixed
+- **URL Auto-Linking Bug**: URLs in descriptions are no longer incorrectly converted to wiki links (e.g., `github.com/vercel` no longer becomes `github.com/[[Vercel|vercel]]`)
+
+### Changed
+- **Wider Modal**: Increased modal width to 900px for more comfortable text entry
+- **Compact Layout**: Reduced padding, margins, and font sizes throughout for better space efficiency
+- **Monospace Textarea**: Description field now uses monospace font for better markdown editing
+- **Multi-Line Support**: Descriptions with multiple lines containing list items (starting with `-` or `*`) are now properly indented as nested items in the output
+
+---
+
 ## [1.0.1] - 2026-02-05
 
 ### Changed

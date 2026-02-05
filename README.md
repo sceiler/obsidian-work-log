@@ -47,7 +47,13 @@ Tailored for professional roles (especially Sales Engineering):
 ## [[2024-02-06]]
 
 - **Win** ([[Big Client]]): Closed enterprise deal - $100k ARR
+
+- **Customer** ([[AI Gateway Team]]): Provided feedback on Opus 4.6 support
+  - https://github.com/vercel/ai-gateway/pull/1160
+  - Fixed within 30 minutes
 ```
+
+**Multi-line entries**: When you include list items (starting with `-`) in your description, they become properly nested sub-items.
 
 **Related Note** (e.g., `John Doe.md`):
 ```markdown
