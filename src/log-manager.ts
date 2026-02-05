@@ -1,4 +1,4 @@
-import { App, TFile, TFolder, moment } from 'obsidian';
+import { App, TFile, moment } from 'obsidian';
 import { CATEGORY_LABELS, type LogEntry, type WorkLogSettings } from './types';
 
 export class LogManager {
@@ -153,7 +153,6 @@ export class LogManager {
 		if (headingIndex !== -1) {
 			// Date exists - append entry to end of this section
 			const afterHeading = content.substring(headingIndex + dateHeading.length);
-			const nextHeadingPattern = this.buildDatePattern(true);
 			const nextHeadingMatch = afterHeading.match(new RegExp(`\n${this.settings.workLogDateHeadingLevel} `));
 
 			let sectionEnd: number;
