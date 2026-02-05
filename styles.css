@@ -1,9 +1,13 @@
 /* Work Log Plugin Styles */
 
-.work-log-modal {
-	padding: 1rem;
+/* Target the modal container for width */
+.work-log-modal-container {
 	width: 800px;
 	max-width: 95vw;
+}
+
+.work-log-modal {
+	padding: 1rem;
 }
 
 .work-log-modal h2 {

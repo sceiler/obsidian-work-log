@@ -37,9 +37,10 @@ export class EntryModal extends Modal {
 	}
 
 	onOpen(): void {
-		const { contentEl } = this;
+		const { contentEl, modalEl } = this;
 		contentEl.empty();
 		contentEl.addClass('work-log-modal');
+		modalEl.addClass('work-log-modal-container');
 
 		contentEl.createEl('h2', { text: 'Add Work Log Entry' });
 
