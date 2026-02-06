@@ -177,24 +177,6 @@
 	white-space: pre-wrap;
 }
 
-/* Settings page category reference */
-.work-log-category-reference {
-	padding: 0.5rem;
-}
-
-.work-log-category-item {
-	padding: 0.25rem 0;
-	font-size: 0.9rem;
-}
-
-.work-log-category-item strong {
-	color: var(--text-normal);
-}
-
-.work-log-category-item span {
-	color: var(--text-muted);
-}
-
 /* Related Note Field */
 .work-log-related-note-input {
 	width: 100%;

@@ -85,6 +85,8 @@ export class EntryModal extends Modal {
 				text.onChange((value: string) => {
 					this.description = value;
 				});
+				// Focus description for fastest common-case entry
+				setTimeout(() => text.inputEl.focus(), 50);
 			});
 
 		// Auto-link indicator
@@ -132,9 +134,6 @@ export class EntryModal extends Modal {
 			text.onChange((value: string) => {
 				this.relatedNote = value;
 			});
-
-			// Focus this field first for quick selection
-			setTimeout(() => text.inputEl.focus(), 50);
 		});
 
 		// Info text

@@ -4,6 +4,8 @@ import { getCategoryLabel, type LogEntry, type WorkLogSettings } from './types';
 export class LogManager {
 	private app: App;
 	private settings: WorkLogSettings;
+	private cachedWorkLogPattern: RegExp | null = null;
+	private cachedRelatedNotePattern: RegExp | null = null;
 
 	constructor(app: App, settings: WorkLogSettings) {
 		this.app = app;
@@ -12,6 +14,8 @@ export class LogManager {
 
 	updateSettings(settings: WorkLogSettings): void {
 		this.settings = settings;
+		this.cachedWorkLogPattern = null;
+		this.cachedRelatedNotePattern = null;
 	}
 
 	/**
@@ -123,19 +127,27 @@ export class LogManager {
 	}
 
 	/**
-	 * Build regex pattern for matching date headings
+	 * Get cached regex pattern for matching date headings.
+	 * Returns a new RegExp each call (with reset lastIndex) from the cached source.
 	 */
 	private buildDatePattern(forWorkLog: boolean): RegExp {
-		const level = forWorkLog
-			? this.settings.workLogDateHeadingLevel.replace('#', '\\#')
-			: this.settings.relatedNoteDateHeadingLevel.replace('#', '\\#');
-
-		if (forWorkLog && this.settings.workLogDateAsLink) {
-			return new RegExp(`${level} \\[\\[(\\d{4}-\\d{2}-\\d{2})\\]\\]`, 'g');
-		} else if (!forWorkLog) {
-			return new RegExp(`${level} \\[\\[(\\d{4}-\\d{2}-\\d{2})\\]\\]`, 'g');
+		if (forWorkLog) {
+			if (!this.cachedWorkLogPattern) {
+				const level = this.settings.workLogDateHeadingLevel.replace('#', '\\#');
+				const dateGroup = this.settings.workLogDateAsLink
+					? `\\[\\[(\\d{4}-\\d{2}-\\d{2})\\]\\]`
+					: `(\\d{4}-\\d{2}-\\d{2})`;
+				this.cachedWorkLogPattern = new RegExp(`${level} ${dateGroup}`, 'g');
+			}
+			this.cachedWorkLogPattern.lastIndex = 0;
+			return this.cachedWorkLogPattern;
 		} else {
-			return new RegExp(`${level} (\\d{4}-\\d{2}-\\d{2})`, 'g');
+			if (!this.cachedRelatedNotePattern) {
+				const level = this.settings.relatedNoteDateHeadingLevel.replace('#', '\\#');
+				this.cachedRelatedNotePattern = new RegExp(`${level} \\[\\[(\\d{4}-\\d{2}-\\d{2})\\]\\]`, 'g');
+			}
+			this.cachedRelatedNotePattern.lastIndex = 0;
+			return this.cachedRelatedNotePattern;
 		}
 	}
 
@@ -324,48 +336,37 @@ export class LogManager {
 	 * Format entry for main work log
 	 */
 	private formatLogEntry(entry: LogEntry): string {
-		const categoryLabel = getCategoryLabel(this.settings.categories, entry.category);
-		const showCategory = this.settings.showCategoryInLog;
 		const description = this.formatMultiLineDescription(entry.description);
 
-		let line: string;
-
-		if (showCategory) {
-			if (entry.relatedNote) {
-				if (this.settings.showTimestamps) {
-					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- **${categoryLabel}** ([[${entry.relatedNote}]], ${time}): ${description}`;
-				} else {
-					line = `- **${categoryLabel}** ([[${entry.relatedNote}]]): ${description}`;
-				}
-			} else {
-				if (this.settings.showTimestamps) {
-					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- **${categoryLabel}** (${time}): ${description}`;
-				} else {
-					line = `- **${categoryLabel}**: ${description}`;
-				}
-			}
-		} else {
-			// No category
-			if (entry.relatedNote) {
-				if (this.settings.showTimestamps) {
-					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- ([[${entry.relatedNote}]], ${time}): ${description}`;
-				} else {
-					line = `- ([[${entry.relatedNote}]]): ${description}`;
-				}
-			} else {
-				if (this.settings.showTimestamps) {
-					const time = moment(entry.timestamp).format('HH:mm');
-					line = `- (${time}): ${description}`;
-				} else {
-					line = `- ${description}`;
-				}
-			}
+		// Build metadata parts: category, related note, timestamp
+		const parts: string[] = [];
+		if (this.settings.showCategoryInLog) {
+			parts.push(`**${getCategoryLabel(this.settings.categories, entry.category)}**`);
+		}
+		if (entry.relatedNote) {
+			parts.push(`[[${entry.relatedNote}]]`);
+		}
+		if (this.settings.showTimestamps) {
+			parts.push(moment(entry.timestamp).format('HH:mm'));
 		}
 
-		return line;
+		if (parts.length === 0) {
+			return `- ${description}`;
+		}
+
+		// Category stands alone before parens: **Cat** (note, time): desc
+		// or **Cat**: desc, or (note, time): desc
+		const hasCategoryPrefix = this.settings.showCategoryInLog;
+		const categoryPart = hasCategoryPrefix ? parts.shift() : '';
+		const parenParts = parts;
+
+		if (categoryPart && parenParts.length > 0) {
+			return `- ${categoryPart} (${parenParts.join(', ')}): ${description}`;
+		} else if (categoryPart) {
+			return `- ${categoryPart}: ${description}`;
+		} else {
+			return `- (${parenParts.join(', ')}): ${description}`;
+		}
 	}
 
 	/**

@@ -19,24 +19,31 @@ export class NoteSuggest extends AbstractInputSuggest<TFile> {
 
 		const queryLower = query.toLowerCase();
 		const files = this.app.vault.getMarkdownFiles();
+		const limit = 10;
 
-		// Filter and sort by relevance
-		const matches = files
-			.filter(file => file.basename.toLowerCase().includes(queryLower))
-			.sort((a, b) => {
-				const aLower = a.basename.toLowerCase();
-				const bLower = b.basename.toLowerCase();
-				// Prioritize starts-with matches
-				const aStarts = aLower.startsWith(queryLower);
-				const bStarts = bLower.startsWith(queryLower);
-				if (aStarts && !bStarts) return -1;
-				if (bStarts && !aStarts) return 1;
-				// Then by length (shorter = more relevant)
-				return a.basename.length - b.basename.length;
-			})
-			.slice(0, 10); // Limit to 10 suggestions
+		// Partition into starts-with and contains buckets to avoid sorting all matches
+		const startsWith: TFile[] = [];
+		const contains: TFile[] = [];
 
-		return matches;
+		for (const file of files) {
+			const nameLower = file.basename.toLowerCase();
+			if (nameLower.startsWith(queryLower)) {
+				startsWith.push(file);
+			} else if (nameLower.includes(queryLower)) {
+				contains.push(file);
+			}
+		}
+
+		// Sort each bucket by length (shorter = more relevant), only up to what we need
+		const byLength = (a: TFile, b: TFile) => a.basename.length - b.basename.length;
+		startsWith.sort(byLength);
+
+		if (startsWith.length >= limit) {
+			return startsWith.slice(0, limit);
+		}
+
+		contains.sort(byLength);
+		return startsWith.concat(contains).slice(0, limit);
 	}
 
 	renderSuggestion(file: TFile, el: HTMLElement): void {

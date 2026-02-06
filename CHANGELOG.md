@@ -5,6 +5,28 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-05
+
+### Performance
+- **AutoLinker**: Pre-compile per-note regexes once during index rebuild instead of recompiling on every entry submission — significant improvement for large vaults
+- **LogManager**: Cache date-heading regex patterns, invalidate only on settings change
+- **NoteSuggest**: Partition suggestions into starts-with/contains buckets to avoid sorting all matches on every keystroke
+
+### Fixed
+- **Delete confirmation**: Deleting a category now shows an inline confirmation prompt instead of removing immediately
+- **Edit form safety**: Editing a category now works on a copy — Cancel cleanly discards changes
+- **ID field sanitization**: Add Category ID field now reflects the sanitized value in real-time (e.g., "My Category" → "my-category")
+- **Modal focus**: Description textarea is now focused on open instead of the Related Note field, matching the most common workflow
+
+### Removed
+- **`dateFormat` setting**: Removed the unused Date Format setting — dates are always `YYYY-MM-DD` internally
+- Dead CSS for the old category reference UI
+
+### Changed
+- Simplified `formatLogEntry` from 8-branch if/else to incremental part-building
+
+---
+
 ## [1.1.0] - 2026-02-05
 
 ### Added

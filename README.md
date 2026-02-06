@@ -104,7 +104,6 @@ Access settings via Settings → Work Log.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Log file path | `work-log.md` | Path to your main work log file |
-| Date format | `YYYY-MM-DD` | Date format (moment.js syntax) |
 
 ### Entry Settings
 

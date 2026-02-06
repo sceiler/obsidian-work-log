@@ -1,6 +1,6 @@
 {
 	"name": "work-log",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Track daily work activities for performance reviews",
 	"main": "main.js",
 	"type": "module",

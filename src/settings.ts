@@ -30,17 +30,6 @@ export class WorkLogSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl)
-			.setName('Date format')
-			.setDesc('Format for dates (uses moment.js format)')
-			.addText(text => text
-				.setPlaceholder('YYYY-MM-DD')
-				.setValue(this.plugin.settings.dateFormat)
-				.onChange(async (value) => {
-					this.plugin.settings.dateFormat = value || 'YYYY-MM-DD';
-					await this.plugin.saveSettings();
-				}));
-
 		// ============ ENTRY SETTINGS ============
 		containerEl.createEl('h2', { text: 'Entry Settings' });
 
@@ -265,13 +254,28 @@ export class WorkLogSettingTab extends PluginSettingTab {
 					.setIcon('trash')
 					.setTooltip('Delete category')
 					.onClick(async () => {
-						const removedId = categories[i].id;
-						categories.splice(i, 1);
-						if (this.plugin.settings.defaultCategory === removedId) {
-							this.plugin.settings.defaultCategory = categories[0].id;
-						}
-						await this.plugin.saveSettings();
-						this.display();
+						// Replace the button row with a confirmation prompt
+						catContainer.empty();
+						new Setting(catContainer)
+							.setName(`Delete "${cat.label}"?`)
+							.setDesc('This cannot be undone.')
+							.addButton(yes => yes
+								.setButtonText('Delete')
+								.setWarning()
+								.onClick(async () => {
+									const removedId = categories[i].id;
+									categories.splice(i, 1);
+									if (this.plugin.settings.defaultCategory === removedId) {
+										this.plugin.settings.defaultCategory = categories[0].id;
+									}
+									await this.plugin.saveSettings();
+									this.display();
+								}))
+							.addButton(no => no
+								.setButtonText('Cancel')
+								.onClick(() => {
+									this.display();
+								}));
 					}));
 			}
 		}
@@ -279,6 +283,8 @@ export class WorkLogSettingTab extends PluginSettingTab {
 
 	private showEditCategoryForm(container: HTMLElement, index: number): void {
 		const cat = this.plugin.settings.categories[index];
+		// Work on a copy so Cancel discards changes
+		const draft = { ...cat };
 		container.empty();
 
 		container.createEl('h3', { text: `Editing: ${cat.label}` });
@@ -287,7 +293,7 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.setName('ID')
 			.setDesc('Internal identifier (cannot be changed)')
 			.addText(text => {
-				text.setValue(cat.id);
+				text.setValue(draft.id);
 				text.setDisabled(true);
 			});
 
@@ -295,32 +301,34 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.setName('Label')
 			.setDesc('Display name shown in dropdowns and entries')
 			.addText(text => text
-				.setValue(cat.label)
-				.onChange(value => { cat.label = value; }));
+				.setValue(draft.label)
+				.onChange(value => { draft.label = value; }));
 
 		new Setting(container)
 			.setName('Description')
 			.setDesc('Help text shown below the category dropdown')
 			.addText(text => text
-				.setValue(cat.description)
-				.onChange(value => { cat.description = value; }));
+				.setValue(draft.description)
+				.onChange(value => { draft.description = value; }));
 
 		new Setting(container)
 			.setName('Placeholder')
 			.setDesc('Example text shown in the description field')
 			.addText(text => text
-				.setValue(cat.placeholder)
-				.onChange(value => { cat.placeholder = value; }));
+				.setValue(draft.placeholder)
+				.onChange(value => { draft.placeholder = value; }));
 
 		new Setting(container)
 			.addButton(btn => btn
 				.setButtonText('Save')
 				.setCta()
 				.onClick(async () => {
-					if (!cat.label.trim()) {
+					if (!draft.label.trim()) {
 						new Notice('Label is required');
 						return;
 					}
+					// Apply draft to the real category
+					Object.assign(cat, draft);
 					await this.plugin.saveSettings();
 					this.display();
 				}))
@@ -348,7 +356,14 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.setDesc('Unique identifier (lowercase letters, numbers, hyphens)')
 			.addText(text => text
 				.setPlaceholder('e.g., meeting')
-				.onChange(value => { newCat.id = value.toLowerCase().replace(/[^a-z0-9-]/g, ''); }));
+				.onChange(value => {
+					const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+					newCat.id = sanitized;
+					// Reflect sanitized value back to the input
+					if (value !== sanitized) {
+						text.setValue(sanitized);
+					}
+				}));
 
 		new Setting(formEl)
 			.setName('Label')

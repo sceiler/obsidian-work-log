@@ -18,7 +18,6 @@ export interface LogEntry {
 export interface WorkLogSettings {
 	// File settings
 	logFilePath: string;
-	dateFormat: string;
 
 	// Entry settings
 	defaultCategory: Category;
@@ -80,7 +79,6 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
 export const DEFAULT_SETTINGS: WorkLogSettings = {
 	// File settings
 	logFilePath: 'work-log.md',
-	dateFormat: 'YYYY-MM-DD',
 
 	// Entry settings
 	defaultCategory: 'customer',

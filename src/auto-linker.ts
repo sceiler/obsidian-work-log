@@ -4,11 +4,18 @@ import { App, TFile, Component } from 'obsidian';
  * Auto-links known note names in text.
  * Uses Obsidian's MetadataCache for efficient lookups.
  */
+interface CachedNotePattern {
+	name: string;
+	originalName: string;
+	linkedPattern: RegExp;
+	matchPattern: RegExp;
+}
+
 export class AutoLinker extends Component {
 	private app: App;
 	private noteNames: Set<string> = new Set();
 	private noteNamesLower: Map<string, string> = new Map(); // lowercase -> original
-	private sortedNames: string[] = []; // cached sorted list for matching
+	private cachedPatterns: CachedNotePattern[] = []; // pre-compiled regexes
 	private indexBuilt: boolean = false;
 
 	constructor(app: App) {
@@ -92,12 +99,24 @@ export class AutoLinker extends Component {
 	}
 
 	/**
-	 * Rebuild sorted list for matching (longest first)
+	 * Rebuild cached patterns for matching (longest first).
+	 * Pre-compiles regexes so processText doesn't recompile on every call.
 	 */
 	private rebuildSortedList(): void {
-		this.sortedNames = Array.from(this.noteNames)
-			.filter(name => name.length > 2) // Skip very short names
+		const sorted = Array.from(this.noteNames)
+			.filter(name => name.length > 2)
 			.sort((a, b) => b.length - a.length);
+
+		this.cachedPatterns = sorted.map(name => {
+			const escaped = this.escapeRegex(name);
+			const originalName = this.noteNamesLower.get(name.toLowerCase()) || name;
+			return {
+				name,
+				originalName,
+				linkedPattern: new RegExp(`\\[\\[${escaped}(\\|[^\\]]*)?\\]\\]`, 'i'),
+				matchPattern: new RegExp(`(?<![\\[\\w])${escaped}(?![\\]\\w])`, 'gi'),
+			};
+		});
 	}
 
 	/**
@@ -105,7 +124,7 @@ export class AutoLinker extends Component {
 	 * Preserves existing [[links]], URLs, and doesn't double-link.
 	 */
 	processText(text: string): string {
-		if (!text || this.sortedNames.length === 0) {
+		if (!text || this.cachedPatterns.length === 0) {
 			return text;
 		}
 
@@ -117,28 +136,20 @@ export class AutoLinker extends Component {
 			return `__URL_PLACEHOLDER_${urls.length - 1}__`;
 		});
 
-		// Now apply auto-linking to the protected text
-		for (const noteName of this.sortedNames) {
+		// Apply auto-linking using pre-compiled patterns
+		for (const cached of this.cachedPatterns) {
 			// Skip if this exact name is already linked somewhere
-			const linkedPattern = new RegExp(`\\[\\[${this.escapeRegex(noteName)}(\\|[^\\]]*)?\\]\\]`, 'i');
-			if (linkedPattern.test(protectedText)) continue;
+			if (cached.linkedPattern.test(protectedText)) continue;
 
-			// Find the note name as a whole word (case-insensitive)
-			// Negative lookbehind: not preceded by [[ or word char
-			// Negative lookahead: not followed by ]] or word char
-			const pattern = new RegExp(
-				`(?<![\\[\\w])${this.escapeRegex(noteName)}(?![\\]\\w])`,
-				'gi'
-			);
+			// Reset lastIndex for the global regex
+			cached.matchPattern.lastIndex = 0;
 
 			// Replace with wiki link, preserving original case from vault
-			const originalName = this.noteNamesLower.get(noteName.toLowerCase()) || noteName;
-			protectedText = protectedText.replace(pattern, (match) => {
-				// If match case differs from note name, use alias syntax
-				if (match !== originalName) {
-					return `[[${originalName}|${match}]]`;
+			protectedText = protectedText.replace(cached.matchPattern, (match) => {
+				if (match !== cached.originalName) {
+					return `[[${cached.originalName}|${match}]]`;
 				}
-				return `[[${originalName}]]`;
+				return `[[${cached.originalName}]]`;
 			});
 		}
 
