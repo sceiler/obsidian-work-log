@@ -5,6 +5,39 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-06
+
+### Fixed
+- **Multi-line description bug**: `formatMultiLineDescription` used `indexOf` instead of the filter callback index, causing incorrect blank line handling
+- **Regex escaping bug**: `buildDatePattern` only escaped the first `#` in heading levels like `###` — now uses proper full-string escaping
+- **Modal data loss**: Modal closed immediately without waiting for the async file write to complete — errors were silently swallowed and form input lost. Now awaits the write and keeps the modal open on failure so the user can retry
+- **Related note info text**: Hardcoded `## Notes → ### [[date]]` instead of reflecting the user's configured heading settings
+- **Settings migration**: `loadSettings()` shallow merge carried orphaned properties (e.g., old `dateFormat`) and had no migration path for new category fields
+- **Auto-linker partial linking**: If a note name was already linked once as `[[Name]]`, all other plain-text occurrences were skipped. Now protects existing links via placeholders and links remaining occurrences
+
+### Added
+- **Submit button loading state**: Button disables and shows "Adding..." during write, prevents double-submission
+- **Keyboard shortcut hint**: Submit button shows `⌘↵` (Mac) or `Ctrl+↵` (Windows/Linux)
+- **Description validation message**: Shows "Description is required" text with `aria-invalid` attribute instead of only a shake animation
+- **Related note existence indicator**: Shows "Note found", "Note will be created", or "Note not found" as you type
+- **Success notice with View link**: After adding an entry, the notice includes a clickable "View" link to open the log file
+- **Settings debounced save**: Text input settings (file path, folder, section heading) now debounce saves (300ms) instead of saving on every keystroke
+
+### Changed
+- **Form field order**: Reordered modal fields to Date → Category → Description → Related note (optional field last, most-used fields first)
+- **Category description placement**: Now uses `Setting.setDesc()` instead of a fragile sibling div with negative margins
+- **Settings label disambiguation**: "Date heading level" renamed to "Work log date heading level" and "Related note date heading level"
+- **Textarea font**: Changed from monospace to `var(--font-text)` for prose-oriented entries
+- **Friday button label**: Shows "Friday" instead of "Last Friday" on weekends for clarity
+- **Category placeholder field**: Uses textarea instead of single-line input in settings edit form
+
+### Performance
+- **AutoLinker debouncing**: `rebuildSortedList()` is now debounced (150ms) to coalesce rapid file create/delete/rename events during vault sync
+- **Indexed note lookup**: `findNoteByName()` uses `metadataCache.getFirstLinkpathDest()` for O(1) lookup instead of linear scan
+- **Cached next-heading regex**: The heading regex in `insertEntryToLog` is now cached instead of being recreated on each call
+
+---
+
 ## [1.1.1] - 2026-02-05
 
 ### Performance

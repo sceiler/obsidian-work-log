@@ -7,7 +7,7 @@ An Obsidian plugin for tracking daily work activities, achievements, and contrib
 ### Core Functionality
 
 - **Dual Logging**: Log entries to both a central work log file AND related notes (people, projects, organizations)
-- **Smart Date Handling**: Quick buttons for Today, Yesterday, Last Friday, plus a full date picker for retrospective entries
+- **Smart Date Handling**: Quick buttons for Today, Yesterday, and Friday/Last Friday (label adjusts on weekends), plus a full date picker for retrospective entries
 - **Chronological Organization**: Entries are automatically sorted in ascending order (oldest first) for natural reading
 - **Auto-Linking**: Automatically converts note names in your entries to `[[wiki links]]`
 - **Note Creation**: Optionally create new notes on-the-fly if they don't exist
@@ -16,11 +16,12 @@ An Obsidian plugin for tracking daily work activities, achievements, and contrib
 
 Access via the ribbon icon or Command Palette (`Work Log: Add work log entry`):
 
-- **Related Note Field**: Autocomplete search for existing notes - type to find people, projects, or organizations
-- **Date Selection**: Today (default), Yesterday, Last Friday, or pick any date
+- **Date Selection**: Today (default), Yesterday, Friday/Last Friday, or pick any date
 - **Category Selection**: Categorize your work with fully customizable categories
 - **Description**: Free-form text with automatic wiki-link detection
-- **Keyboard Shortcuts**: `Cmd/Ctrl+Enter` to submit, `Escape` to cancel
+- **Related Note Field**: Autocomplete search for existing notes with real-time existence indicator
+- **Keyboard Shortcuts**: `Cmd/Ctrl+Enter` to submit (hint shown on button), `Escape` to cancel
+- **Error Handling**: Validation messages, loading state during save, modal stays open on failure
 
 ### Categories
 
@@ -119,7 +120,7 @@ Access settings via Settings → Work Log.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Date heading level | `##` (H2) | Heading level for dates |
+| Work log date heading level | `##` (H2) | Heading level for dates |
 | Date as wiki link | `true` | Format as `[[2024-02-05]]` |
 
 ### Related Notes
@@ -129,7 +130,7 @@ Access settings via Settings → Work Log.
 | Create note if missing | `true` | Auto-create notes that don't exist |
 | New note folder | `References` | Folder for newly created notes |
 | Section heading | `## Notes` | Heading for notes section |
-| Date heading level | `###` (H3) | Heading level for date subsections |
+| Related note date heading level | `###` (H3) | Heading level for date subsections |
 
 ### Auto-Linking
 
@@ -191,7 +192,8 @@ Helped [[John Doe]] with deployment
 
 - Case-insensitive matching
 - Preserves original note name casing
-- Won't double-link existing `[[links]]`
+- Protects existing `[[links]]` and URLs — won't double-link or corrupt them
+- Links all unlinked occurrences of a name (not just the first)
 - Minimum 3 characters to avoid false positives
 
 ## Use Cases
