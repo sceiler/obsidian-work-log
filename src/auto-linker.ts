@@ -7,7 +7,6 @@ import { App, TFile, Component } from 'obsidian';
 interface CachedNotePattern {
 	name: string;
 	originalName: string;
-	linkedPattern: RegExp;
 	matchPattern: RegExp;
 }
 
@@ -17,6 +16,7 @@ export class AutoLinker extends Component {
 	private noteNamesLower: Map<string, string> = new Map(); // lowercase -> original
 	private cachedPatterns: CachedNotePattern[] = []; // pre-compiled regexes
 	private indexBuilt: boolean = false;
+	private rebuildTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(app: App) {
 		super();
@@ -83,7 +83,7 @@ export class AutoLinker extends Component {
 		if (!this.noteNames.has(name)) {
 			this.noteNames.add(name);
 			this.noteNamesLower.set(name.toLowerCase(), name);
-			this.rebuildSortedList();
+			this.scheduleRebuild();
 		}
 	}
 
@@ -94,8 +94,21 @@ export class AutoLinker extends Component {
 		if (this.noteNames.has(name)) {
 			this.noteNames.delete(name);
 			this.noteNamesLower.delete(name.toLowerCase());
-			this.rebuildSortedList();
+			this.scheduleRebuild();
 		}
+	}
+
+	/**
+	 * Debounce rebuildSortedList to avoid CPU spikes during bulk file operations
+	 */
+	private scheduleRebuild(): void {
+		if (this.rebuildTimer !== null) {
+			clearTimeout(this.rebuildTimer);
+		}
+		this.rebuildTimer = setTimeout(() => {
+			this.rebuildTimer = null;
+			this.rebuildSortedList();
+		}, 150);
 	}
 
 	/**
@@ -113,7 +126,6 @@ export class AutoLinker extends Component {
 			return {
 				name,
 				originalName,
-				linkedPattern: new RegExp(`\\[\\[${escaped}(\\|[^\\]]*)?\\]\\]`, 'i'),
 				matchPattern: new RegExp(`(?<![\\[\\w])${escaped}(?![\\]\\w])`, 'gi'),
 			};
 		});
@@ -128,19 +140,23 @@ export class AutoLinker extends Component {
 			return text;
 		}
 
-		// Extract URLs and replace with placeholders to protect them from auto-linking
+		// Extract URLs and existing [[links]] with placeholders to protect them
+		const placeholders: string[] = [];
 		const urlPattern = /https?:\/\/[^\s<>[\]]+/gi;
-		const urls: string[] = [];
 		let protectedText = text.replace(urlPattern, (match) => {
-			urls.push(match);
-			return `__URL_PLACEHOLDER_${urls.length - 1}__`;
+			placeholders.push(match);
+			return `__PLACEHOLDER_${placeholders.length - 1}__`;
+		});
+
+		// Protect existing [[wiki links]] so they aren't partially re-matched
+		const wikiLinkPattern = /\[\[[^\]]+\]\]/g;
+		protectedText = protectedText.replace(wikiLinkPattern, (match) => {
+			placeholders.push(match);
+			return `__PLACEHOLDER_${placeholders.length - 1}__`;
 		});
 
 		// Apply auto-linking using pre-compiled patterns
 		for (const cached of this.cachedPatterns) {
-			// Skip if this exact name is already linked somewhere
-			if (cached.linkedPattern.test(protectedText)) continue;
-
 			// Reset lastIndex for the global regex
 			cached.matchPattern.lastIndex = 0;
 
@@ -153,9 +169,9 @@ export class AutoLinker extends Component {
 			});
 		}
 
-		// Restore URLs
-		const result = protectedText.replace(/__URL_PLACEHOLDER_(\d+)__/g, (_, index) => {
-			return urls[parseInt(index, 10)];
+		// Restore all placeholders
+		const result = protectedText.replace(/__PLACEHOLDER_(\d+)__/g, (_, index) => {
+			return placeholders[parseInt(index, 10)];
 		});
 
 		return result;

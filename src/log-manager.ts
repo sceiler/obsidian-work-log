@@ -6,6 +6,7 @@ export class LogManager {
 	private settings: WorkLogSettings;
 	private cachedWorkLogPattern: RegExp | null = null;
 	private cachedRelatedNotePattern: RegExp | null = null;
+	private cachedNextHeadingPattern: RegExp | null = null;
 
 	constructor(app: App, settings: WorkLogSettings) {
 		this.app = app;
@@ -16,6 +17,7 @@ export class LogManager {
 		this.settings = settings;
 		this.cachedWorkLogPattern = null;
 		this.cachedRelatedNotePattern = null;
+		this.cachedNextHeadingPattern = null;
 	}
 
 	/**
@@ -53,8 +55,7 @@ export class LogManager {
 	 * Find a note by name (case-insensitive)
 	 */
 	private findNoteByName(noteName: string): TFile | null {
-		const files = this.app.vault.getMarkdownFiles();
-		return files.find(f => f.basename.toLowerCase() === noteName.toLowerCase()) || null;
+		return this.app.metadataCache.getFirstLinkpathDest(noteName, '') ?? null;
 	}
 
 	/**
@@ -133,7 +134,7 @@ export class LogManager {
 	private buildDatePattern(forWorkLog: boolean): RegExp {
 		if (forWorkLog) {
 			if (!this.cachedWorkLogPattern) {
-				const level = this.settings.workLogDateHeadingLevel.replace('#', '\\#');
+				const level = this.escapeHeadingLevel(this.settings.workLogDateHeadingLevel);
 				const dateGroup = this.settings.workLogDateAsLink
 					? `\\[\\[(\\d{4}-\\d{2}-\\d{2})\\]\\]`
 					: `(\\d{4}-\\d{2}-\\d{2})`;
@@ -143,12 +144,16 @@ export class LogManager {
 			return this.cachedWorkLogPattern;
 		} else {
 			if (!this.cachedRelatedNotePattern) {
-				const level = this.settings.relatedNoteDateHeadingLevel.replace('#', '\\#');
+				const level = this.escapeHeadingLevel(this.settings.relatedNoteDateHeadingLevel);
 				this.cachedRelatedNotePattern = new RegExp(`${level} \\[\\[(\\d{4}-\\d{2}-\\d{2})\\]\\]`, 'g');
 			}
 			this.cachedRelatedNotePattern.lastIndex = 0;
 			return this.cachedRelatedNotePattern;
 		}
+	}
+
+	private escapeHeadingLevel(level: string): string {
+		return level.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
 	/**
@@ -165,7 +170,10 @@ export class LogManager {
 		if (headingIndex !== -1) {
 			// Date exists - append entry to end of this section
 			const afterHeading = content.substring(headingIndex + dateHeading.length);
-			const nextHeadingMatch = afterHeading.match(new RegExp(`\n${this.settings.workLogDateHeadingLevel} `));
+			if (!this.cachedNextHeadingPattern) {
+				this.cachedNextHeadingPattern = new RegExp(`\n${this.escapeHeadingLevel(this.settings.workLogDateHeadingLevel)} `);
+			}
+			const nextHeadingMatch = afterHeading.match(this.cachedNextHeadingPattern);
 
 			let sectionEnd: number;
 			if (nextHeadingMatch && nextHeadingMatch.index !== undefined) {
@@ -241,7 +249,7 @@ export class LogManager {
 
 		// Check if date subsection already exists
 		const dateSubsectionPattern = new RegExp(
-			`${this.settings.relatedNoteDateHeadingLevel.replace('#', '\\#')} \\[\\[${entry.date}\\]\\]`
+			`${this.escapeHeadingLevel(this.settings.relatedNoteDateHeadingLevel)} \\[\\[${entry.date}\\]\\]`
 		);
 		const dateMatch = notesSection.match(dateSubsectionPattern);
 
@@ -329,7 +337,7 @@ export class LogManager {
 				return '  ' + line.trim();
 			}
 			return '';
-		}).filter(line => line !== '' || lines.indexOf(line) === 0).join('\n');
+		}).filter((line, idx) => line !== '' || idx === 0).join('\n');
 	}
 
 	/**

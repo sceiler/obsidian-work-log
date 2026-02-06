@@ -4,10 +4,21 @@ import { type CategoryConfig } from './types';
 
 export class WorkLogSettingTab extends PluginSettingTab {
 	plugin: WorkLogPlugin;
+	private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(app: App, plugin: WorkLogPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	private debouncedSave(): void {
+		if (this.saveTimer !== null) {
+			clearTimeout(this.saveTimer);
+		}
+		this.saveTimer = setTimeout(async () => {
+			this.saveTimer = null;
+			await this.plugin.saveSettings();
+		}, 300);
 	}
 
 	display(): void {
@@ -25,9 +36,9 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder('work-log.md')
 				.setValue(this.plugin.settings.logFilePath)
-				.onChange(async (value) => {
+				.onChange((value) => {
 					this.plugin.settings.logFilePath = value || 'work-log.md';
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		// ============ ENTRY SETTINGS ============
@@ -91,7 +102,7 @@ export class WorkLogSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Work Log Formatting' });
 
 		new Setting(containerEl)
-			.setName('Date heading level')
+			.setName('Work log date heading level')
 			.setDesc('Heading level for date sections in work log')
 			.addDropdown(dropdown => {
 				dropdown.addOption('##', '## (H2)');
@@ -132,9 +143,9 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder('References')
 				.setValue(this.plugin.settings.newRelatedNoteFolder)
-				.onChange(async (value) => {
+				.onChange((value) => {
 					this.plugin.settings.newRelatedNoteFolder = value;
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		new Setting(containerEl)
@@ -143,13 +154,13 @@ export class WorkLogSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder('## Notes')
 				.setValue(this.plugin.settings.relatedNoteSectionHeading)
-				.onChange(async (value) => {
+				.onChange((value) => {
 					this.plugin.settings.relatedNoteSectionHeading = value || '## Notes';
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		new Setting(containerEl)
-			.setName('Date heading level')
+			.setName('Related note date heading level')
 			.setDesc('Heading level for date subsections in related notes')
 			.addDropdown(dropdown => {
 				dropdown.addOption('###', '### (H3)');
@@ -314,9 +325,11 @@ export class WorkLogSettingTab extends PluginSettingTab {
 		new Setting(container)
 			.setName('Placeholder')
 			.setDesc('Example text shown in the description field')
-			.addText(text => text
-				.setValue(draft.placeholder)
-				.onChange(value => { draft.placeholder = value; }));
+			.addTextArea(text => {
+				text.setValue(draft.placeholder);
+				text.inputEl.rows = 2;
+				text.onChange(value => { draft.placeholder = value; });
+			});
 
 		new Setting(container)
 			.addButton(btn => btn

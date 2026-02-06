@@ -10,7 +10,9 @@ import { NoteSuggest } from './note-suggest';
 
 export class EntryModal extends Modal {
 	private settings: WorkLogSettings;
-	private onSubmit: (entry: LogEntry) => void;
+	private onSubmit: (entry: LogEntry) => Promise<void>;
+	private isSubmitting: boolean = false;
+	private submitBtn: HTMLButtonElement | null = null;
 	private autoLinker: AutoLinker;
 
 	private selectedDate: string;
@@ -24,7 +26,7 @@ export class EntryModal extends Modal {
 		app: App,
 		settings: WorkLogSettings,
 		autoLinker: AutoLinker,
-		onSubmit: (entry: LogEntry) => void
+		onSubmit: (entry: LogEntry) => Promise<void>
 	) {
 		super(app);
 		this.settings = settings;
@@ -46,16 +48,11 @@ export class EntryModal extends Modal {
 		const dateSection = contentEl.createDiv({ cls: 'work-log-date-section' });
 		this.createDatePicker(dateSection);
 
-		// Related note with autocomplete
-		this.createRelatedNoteField(contentEl);
-
-		// Category dropdown with descriptions
-		const categorySetting = new Setting(contentEl)
-			.setName('Category');
-
-		const categoryDesc = contentEl.createDiv({ cls: 'work-log-category-desc' });
+		// Category dropdown with description (UI-4: desc is part of Setting, not a sibling div)
 		const initialConfig = getCategoryConfig(this.settings.categories, this.selectedCategory);
-		categoryDesc.setText(initialConfig?.description ?? '');
+		const categorySetting = new Setting(contentEl)
+			.setName('Category')
+			.setDesc(initialConfig?.description ?? '');
 
 		categorySetting.addDropdown((dropdown: DropdownComponent) => {
 			for (const cat of this.settings.categories) {
@@ -65,7 +62,7 @@ export class EntryModal extends Modal {
 			dropdown.onChange((value: string) => {
 				this.selectedCategory = value as Category;
 				const config = getCategoryConfig(this.settings.categories, this.selectedCategory);
-				categoryDesc.setText(config?.description ?? '');
+				categorySetting.setDesc(config?.description ?? '');
 				if (this.descriptionEl) {
 					this.descriptionEl.setPlaceholder(config?.placeholder ?? '');
 				}
@@ -95,17 +92,23 @@ export class EntryModal extends Modal {
 			autoLinkNote.setText('Names of existing notes will be automatically linked');
 		}
 
+		// Related note with autocomplete (moved after description — optional field last)
+		this.createRelatedNoteField(contentEl);
+
 		// Submit button
 		const buttonContainer = contentEl.createDiv({ cls: 'work-log-buttons' });
 
 		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
 		cancelBtn.addEventListener('click', () => this.close());
 
-		const submitBtn = buttonContainer.createEl('button', {
+		this.submitBtn = buttonContainer.createEl('button', {
 			text: 'Add Entry',
-			cls: 'mod-cta'
+			cls: 'mod-cta',
+			attr: { 'aria-keyshortcuts': 'Meta+Enter' }
 		});
-		submitBtn.addEventListener('click', () => this.submit());
+		const shortcutHint = this.submitBtn.createSpan({ cls: 'work-log-shortcut-hint' });
+		shortcutHint.setText(navigator.platform.includes('Mac') ? '⌘↵' : 'Ctrl+↵');
+		this.submitBtn.addEventListener('click', () => this.submit());
 
 		// Handle keyboard shortcuts
 		contentEl.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -124,6 +127,8 @@ export class EntryModal extends Modal {
 			.setName('Related note')
 			.setDesc('Optional: Log this entry to a person/org/project note');
 
+		const noteStatusEl = container.createDiv({ cls: 'work-log-note-status' });
+
 		setting.addText(text => {
 			text.setPlaceholder('Start typing to search...');
 			text.inputEl.addClass('work-log-related-note-input');
@@ -133,12 +138,25 @@ export class EntryModal extends Modal {
 
 			text.onChange((value: string) => {
 				this.relatedNote = value;
+				// UX-8: Show existence indicator
+				const trimmed = value.trim();
+				if (!trimmed) {
+					noteStatusEl.textContent = '';
+					noteStatusEl.className = 'work-log-note-status';
+				} else if (this.autoLinker.noteExists(trimmed)) {
+					noteStatusEl.textContent = 'Note found';
+					noteStatusEl.className = 'work-log-note-status is-found';
+				} else {
+					const action = this.settings.createRelatedNoteIfMissing ? 'will be created' : 'not found';
+					noteStatusEl.textContent = `Note ${action}`;
+					noteStatusEl.className = 'work-log-note-status is-missing';
+				}
 			});
 		});
 
 		// Info text
 		const infoEl = container.createDiv({ cls: 'work-log-related-note-info' });
-		infoEl.setText('Entry will be added under ## Notes → ### [[date]] in the selected note');
+		infoEl.setText(`Entry will be added under ${this.settings.relatedNoteSectionHeading} → ${this.settings.relatedNoteDateHeadingLevel} [[date]] in the selected note`);
 	}
 
 	private createDatePicker(container: HTMLElement): void {
@@ -167,7 +185,10 @@ export class EntryModal extends Modal {
 			this.updateActiveButton(quickButtons, yesterdayBtn);
 		});
 
-		const lastFridayBtn = quickButtons.createEl('button', { text: 'Last Friday', cls: 'work-log-date-btn' });
+		// On Sat/Sun, the button targets "this past Friday" — label accordingly
+		const dayOfWeekNow = moment().day();
+		const fridayLabel = (dayOfWeekNow === 0 || dayOfWeekNow === 6) ? 'Friday' : 'Last Friday';
+		const lastFridayBtn = quickButtons.createEl('button', { text: fridayLabel, cls: 'work-log-date-btn' });
 		lastFridayBtn.addEventListener('click', () => {
 			const today = moment();
 			const dayOfWeek = today.day();
@@ -231,12 +252,29 @@ export class EntryModal extends Modal {
 		return date.format('dddd, MMMM D, YYYY');
 	}
 
-	private submit(): void {
+	private async submit(): Promise<void> {
+		if (this.isSubmitting) return;
+
 		if (!this.description.trim()) {
 			const descEl = this.contentEl.querySelector('.work-log-description');
 			if (descEl) {
 				descEl.addClass('work-log-error');
-				setTimeout(() => descEl.removeClass('work-log-error'), 1000);
+				descEl.setAttribute('aria-invalid', 'true');
+				setTimeout(() => {
+					descEl.removeClass('work-log-error');
+					descEl.removeAttribute('aria-invalid');
+				}, 1000);
+			}
+			// UX-2: Show visible error message
+			let errorMsg = this.contentEl.querySelector('.work-log-error-msg');
+			if (!errorMsg) {
+				errorMsg = this.contentEl.querySelector('.work-log-description')
+					?.closest('.setting-item')
+					?.createDiv({ cls: 'work-log-error-msg' }) ?? null;
+			}
+			if (errorMsg) {
+				errorMsg.textContent = 'Description is required';
+				setTimeout(() => errorMsg?.remove(), 3000);
 			}
 			return;
 		}
@@ -255,8 +293,26 @@ export class EntryModal extends Modal {
 			timestamp: Date.now()
 		};
 
-		this.onSubmit(entry);
-		this.close();
+		// UX-1 / UI-3: Disable button and show loading state during async write
+		this.isSubmitting = true;
+		if (this.submitBtn) {
+			this.submitBtn.disabled = true;
+			this.submitBtn.textContent = 'Adding...';
+		}
+
+		try {
+			await this.onSubmit(entry);
+			this.close();
+		} catch {
+			// Re-enable on failure so user can retry
+			this.isSubmitting = false;
+			if (this.submitBtn) {
+				this.submitBtn.disabled = false;
+				this.submitBtn.textContent = 'Add Entry';
+				const shortcutHint = this.submitBtn.createSpan({ cls: 'work-log-shortcut-hint' });
+				shortcutHint.setText(navigator.platform.includes('Mac') ? '⌘↵' : 'Ctrl+↵');
+			}
+		}
 	}
 
 	onClose(): void {

@@ -50,6 +50,10 @@ export default class WorkLogPlugin extends Plugin {
 		this.addSettingTab(new WorkLogSettingTab(this.app, this));
 	}
 
+	onunload(): void {
+		// AutoLinker cleanup is handled by addChild() lifecycle
+	}
+
 	private registerCategoryCommands(): void {
 		for (const cmdId of this.registeredCategoryCommandIds) {
 			this.removeCommand(cmdId);
@@ -96,31 +100,59 @@ export default class WorkLogPlugin extends Plugin {
 			if (entry.relatedNote) {
 				try {
 					await this.logManager.addToRelatedNote(entry.relatedNote, entry);
-					new Notice(`Added ${label} to work log and [[${entry.relatedNote}]]`);
+					this.showSuccessNotice(`Added ${label} to work log and [[${entry.relatedNote}]]`);
 				} catch (relatedError) {
 					console.error('Failed to add to related note:', relatedError);
 					new Notice(`Added to work log, but failed to add to [[${entry.relatedNote}]]: ${relatedError}`);
 				}
 			} else {
-				new Notice(`Added ${label} entry for ${entry.date}`);
+				this.showSuccessNotice(`Added ${label} entry for ${entry.date}`);
 			}
 		} catch (error) {
 			console.error('Failed to add entry:', error);
 			new Notice('Failed to add entry. Check console for details.');
+			throw error;
 		}
 	}
 
+	private showSuccessNotice(message: string): void {
+		const fragment = document.createDocumentFragment();
+		fragment.appendText(message + ' ');
+		const link = document.createElement('a');
+		link.textContent = 'View';
+		link.addEventListener('click', () => {
+			this.logManager.openLogFile();
+		});
+		fragment.appendChild(link);
+		new Notice(fragment, 5000);
+	}
+
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const saved = (await this.loadData()) ?? {};
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
 
 		// Migration: ensure categories array exists
 		if (!this.settings.categories || this.settings.categories.length === 0) {
 			this.settings.categories = DEFAULT_CATEGORIES;
 		}
 
+		// Migration: ensure all category objects have required fields
+		for (const cat of this.settings.categories) {
+			if (cat.description === undefined) cat.description = '';
+			if (cat.placeholder === undefined) cat.placeholder = '';
+		}
+
 		// Ensure defaultCategory references a valid category
 		if (!this.settings.categories.some(c => c.id === this.settings.defaultCategory)) {
 			this.settings.defaultCategory = this.settings.categories[0].id;
+		}
+
+		// Clean orphaned properties not in the settings interface
+		const validKeys = new Set(Object.keys(DEFAULT_SETTINGS));
+		for (const key of Object.keys(this.settings)) {
+			if (!validKeys.has(key)) {
+				delete (this.settings as unknown as Record<string, unknown>)[key];
+			}
 		}
 	}
 
