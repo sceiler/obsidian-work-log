@@ -18,5 +18,11 @@ export default tseslint.config(
 			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 			'@typescript-eslint/no-explicit-any': 'warn'
 		}
+	},
+	{
+		files: ['src/__tests__/**/*.ts', 'src/__mocks__/**/*.ts'],
+		rules: {
+			'@typescript-eslint/no-explicit-any': 'off'
+		}
 	}
 );

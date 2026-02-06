@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auto-linker partial linking**: If a note name was already linked once as `[[Name]]`, all other plain-text occurrences were skipped. Now protects existing links via placeholders and links remaining occurrences
 
 ### Added
+- **Unit test suite**: 61 tests across 3 test files covering types, LogManager, and AutoLinker using Vitest with a minimal Obsidian API mock
 - **Submit button loading state**: Button disables and shows "Adding..." during write, prevents double-submission
 - **Keyboard shortcut hint**: Submit button shows `⌘↵` (Mac) or `Ctrl+↵` (Windows/Linux)
 - **Description validation message**: Shows "Description is required" text with `aria-invalid` attribute instead of only a shake animation

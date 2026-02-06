@@ -256,6 +256,8 @@ Delivered final presentation
 npm install          # Install dependencies
 npm run dev          # Development mode (watch)
 npm run build        # Production build
+npm run test:run     # Run unit tests
+npm run test         # Run tests in watch mode
 npm run lint         # Run ESLint
 ```
 
@@ -264,17 +266,24 @@ npm run lint         # Run ESLint
 ```
 work-log/
 ├── src/
-│   ├── main.ts           # Plugin entry point
-│   ├── settings.ts       # Settings tab UI
-│   ├── entry-modal.ts    # Entry modal with date picker
-│   ├── log-manager.ts    # File operations
-│   ├── auto-linker.ts    # Wiki-link detection
-│   ├── note-suggest.ts   # Autocomplete component
-│   └── types.ts          # TypeScript interfaces
-├── main.js               # Compiled output
-├── manifest.json         # Plugin metadata
-├── styles.css            # Modal styling
-└── package.json          # Dependencies
+│   ├── __mocks__/
+│   │   └── obsidian.ts       # Minimal Obsidian API mock for tests
+│   ├── __tests__/
+│   │   ├── auto-linker.test.ts   # AutoLinker tests (21 tests)
+│   │   ├── log-manager.test.ts   # LogManager tests (34 tests)
+│   │   └── types.test.ts         # Type utility tests (6 tests)
+│   ├── main.ts               # Plugin entry point
+│   ├── settings.ts           # Settings tab UI
+│   ├── entry-modal.ts        # Entry modal with date picker
+│   ├── log-manager.ts        # File operations
+│   ├── auto-linker.ts        # Wiki-link detection
+│   ├── note-suggest.ts       # Autocomplete component
+│   └── types.ts              # TypeScript interfaces
+├── main.js                   # Compiled output
+├── manifest.json             # Plugin metadata
+├── styles.css                # Modal styling
+├── vitest.config.ts          # Test configuration
+└── package.json              # Dependencies
 ```
 
 ## Contributing
