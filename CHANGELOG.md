@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Task Management**: New task creation modal with Eisenhower Matrix prioritization (Urgent/Important toggles), optional due dates, and related note attachment
 - **Task Modal**: Description with auto-linking, pill-shaped priority toggle buttons with real-time quadrant label, related note autocomplete with existence indicator, due date quick buttons with dynamic weekday names
+- **Natural Language Due Dates**: Type dates like "this friday", "next week", or "in 3 days" in the due date field — parsed on blur/enter using bundled chrono-node (no external plugin required)
 - **Dynamic Due Date Buttons**: Quick select shows Today, Tomorrow, Day after, plus remaining weekdays of the current work week by name (e.g., Thu, Fri), and 1 week
-- **Due Date Urgency**: Tasks due within the configurable threshold (default: 3 days) automatically toggle the Urgent flag with a hint label
-- **Journal Notes**: Tasks without a related note are written to auto-created daily journal notes (e.g., `2026-02-10 Journal.md`) with Obsidian Tasks query blocks for old/new tasks
+- **Due Date Urgency**: Tasks due within the configurable threshold (default: 3 days) automatically toggle the Urgent flag with a hint label- **Journal Notes**: Tasks without a related note are written to auto-created daily journal notes (e.g., `2026-02-10 Journal.md`) with Obsidian Tasks query blocks for old/new tasks
 - **Tasks MOC**: Auto-created Tasks index note (`Tasks.md`) with query blocks grouping tasks by Eisenhower quadrant
 - **Dataview Inline Fields**: Task metadata uses `[priority:: level]`, `[due:: date]`, `[created:: date]` format for compatibility with Obsidian Tasks and Dataview plugins
 - **Task Commands**: `Create task`, `Open today's journal`, `Open tasks index`
