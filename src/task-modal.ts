@@ -1,4 +1,5 @@
 import { App, Modal, Setting, moment, TextAreaComponent } from 'obsidian';
+import * as chrono from 'chrono-node';
 import { type TaskEntry, type WorkLogSettings } from './types';
 import { AutoLinker } from './auto-linker';
 import { NoteSuggest } from './note-suggest';
@@ -32,6 +33,9 @@ export class TaskModal extends Modal {
 	private urgencyHint: HTMLElement | null = null;
 	private urgencyAutoSet: boolean = false;
 	private dueDateInput: HTMLInputElement | null = null;
+	private nlDateInput: HTMLInputElement | null = null;
+	private nlDateStatus: HTMLElement | null = null;
+	private quickDateButtons: { label: string; days: number; el?: HTMLButtonElement }[] = [];
 
 	constructor(
 		app: App,
@@ -191,15 +195,52 @@ export class TaskModal extends Modal {
 		return buttons;
 	}
 
+	private parseNLDate(text: string): void {
+		const trimmed = text.trim();
+		if (!trimmed || !this.nlDateStatus) return;
+
+		const parsed = chrono.parseDate(trimmed);
+		if (parsed) {
+			const m = moment(parsed);
+			const date = m.format('YYYY-MM-DD');
+			this.setDueDate(date, this.quickDateButtons, null);
+			this.nlDateStatus.textContent = m.format('ddd, MMM D, YYYY');
+			this.nlDateStatus.className = 'work-log-nl-date-status is-parsed';
+		} else {
+			this.nlDateStatus.textContent = 'Could not parse date';
+			this.nlDateStatus.className = 'work-log-nl-date-status is-error';
+		}
+	}
+
 	private createDueDateField(container: HTMLElement): void {
 		const section = container.createDiv({ cls: 'work-log-due-date-section' });
 		section.createEl('div', { cls: 'work-log-date-label', text: 'Due date' });
 
+		// Natural language date input
+		const nlRow = section.createDiv({ cls: 'work-log-nl-date-row' });
+		const nlInput = nlRow.createEl('input', {
+			type: 'text',
+			cls: 'work-log-nl-date-input',
+			attr: { placeholder: 'e.g. "this friday", "next week", "in 3 days"' }
+		});
+		this.nlDateInput = nlInput;
+		this.nlDateStatus = nlRow.createDiv({ cls: 'work-log-nl-date-status' });
+		this.nlDateStatus.setText('\u00A0');
+
+		nlInput.addEventListener('blur', () => this.parseNLDate(nlInput.value));
+		nlInput.addEventListener('keydown', (e: KeyboardEvent) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				this.parseNLDate(nlInput.value);
+			}
+		});
+
+		// Quick date buttons
 		const quickRow = section.createDiv({ cls: 'work-log-quick-dates' });
 
-		const buttons: { label: string; days: number; el?: HTMLButtonElement }[] = this.buildQuickDateButtons();
+		this.quickDateButtons = this.buildQuickDateButtons();
 
-		for (const btn of buttons) {
+		for (const btn of this.quickDateButtons) {
 			btn.el = quickRow.createEl('button', {
 				text: btn.label,
 				cls: 'work-log-date-btn'
@@ -207,20 +248,20 @@ export class TaskModal extends Modal {
 			btn.el.addEventListener('click', () => {
 				const date = moment().add(btn.days, 'days').format('YYYY-MM-DD');
 				if (this.dueDate === date) {
-					// Toggle off if already selected
-					this.setDueDate('', buttons, null);
+					this.setDueDate('', this.quickDateButtons, null);
 				} else {
-					this.setDueDate(date, buttons, btn.el!);
+					this.setDueDate(date, this.quickDateButtons, btn.el!);
 				}
 			});
 		}
 
+		// Date picker fallback
 		const dateInput = section.createEl('input', {
 			type: 'date',
 			cls: 'work-log-due-date-input'
 		});
 		dateInput.addEventListener('change', () => {
-			this.setDueDate(dateInput.value, buttons, null);
+			this.setDueDate(dateInput.value, this.quickDateButtons, null);
 		});
 
 		this.dueDateInput = dateInput;
@@ -240,6 +281,14 @@ export class TaskModal extends Modal {
 		}
 		if (activeBtn) {
 			activeBtn.addClass('work-log-date-btn-active');
+		}
+		// Clear nl input when date is set from buttons/picker (not from nl input itself)
+		if (this.nlDateInput && !this.nlDateInput.matches(':focus')) {
+			this.nlDateInput.value = '';
+			if (this.nlDateStatus) {
+				this.nlDateStatus.setText('\u00A0');
+				this.nlDateStatus.className = 'work-log-nl-date-status';
+			}
 		}
 		this.checkUrgencyThreshold();
 	}

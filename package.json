@@ -32,6 +32,7 @@
 		"vitest": "^4.0.18"
 	},
 	"dependencies": {
+		"chrono-node": "^2.9.0",
 		"obsidian": "latest"
 	}
 }

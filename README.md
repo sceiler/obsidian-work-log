@@ -46,7 +46,7 @@ Access via the ribbon icon (check-square) or Command Palette (`Work Log: Create 
 - **Description**: Free-form text with automatic wiki-link detection
 - **Priority**: Toggle `Important` and `Urgent` independently — the Eisenhower quadrant label updates in real time
 - **Related Note**: Autocomplete search — tasks are written to this note under `## Tasks`. Without a related note, tasks go to the daily journal note
-- **Due Date**: Quick buttons (Today, Tomorrow, Day after, remaining weekdays, 1 week) plus a date picker. Due dates within the urgency threshold automatically toggle `Urgent`
+- **Due Date**: Natural language input (e.g., "this friday", "next week", "in 3 days") plus quick buttons (Today, Tomorrow, Day after, remaining weekdays, 1 week) and a date picker. Due dates within the urgency threshold automatically toggle `Urgent`
 - **Keyboard Shortcuts**: `Cmd/Ctrl+Enter` to submit, `Escape` to cancel
 
 #### Eisenhower Priority Mapping
