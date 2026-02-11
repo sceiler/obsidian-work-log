@@ -1,13 +1,16 @@
 import { Notice, Plugin } from 'obsidian';
-import { DEFAULT_SETTINGS, DEFAULT_CATEGORIES, getCategoryLabel, type Category, type LogEntry, type WorkLogSettings } from './types';
+import { DEFAULT_SETTINGS, DEFAULT_CATEGORIES, getCategoryLabel, type Category, type LogEntry, type TaskEntry, type WorkLogSettings } from './types';
 import { WorkLogSettingTab } from './settings';
 import { LogManager } from './log-manager';
+import { TaskManager } from './task-manager';
 import { EntryModal } from './entry-modal';
+import { TaskModal } from './task-modal';
 import { AutoLinker } from './auto-linker';
 
 export default class WorkLogPlugin extends Plugin {
 	settings: WorkLogSettings;
 	private logManager: LogManager;
+	private taskManager: TaskManager;
 	private autoLinker: AutoLinker;
 	private registeredCategoryCommandIds: Set<string> = new Set();
 
@@ -15,6 +18,7 @@ export default class WorkLogPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.logManager = new LogManager(this.app, this.settings);
+		this.taskManager = new TaskManager(this.app, this.settings);
 
 		// Register AutoLinker as child component for proper lifecycle management
 		this.autoLinker = new AutoLinker(this.app);
@@ -23,6 +27,11 @@ export default class WorkLogPlugin extends Plugin {
 		// Add ribbon icon for quick access
 		this.addRibbonIcon('plus-circle', 'Add work log entry', () => {
 			this.openEntryModal();
+		});
+
+		// Add ribbon icon for tasks
+		this.addRibbonIcon('check-square', 'Create task', () => {
+			this.openTaskModal();
 		});
 
 		// Add command to open entry modal
@@ -40,6 +49,31 @@ export default class WorkLogPlugin extends Plugin {
 			name: 'Open work log',
 			callback: () => {
 				this.logManager.openLogFile();
+			}
+		});
+
+		// Task commands
+		this.addCommand({
+			id: 'create-task',
+			name: 'Create task',
+			callback: () => {
+				this.openTaskModal();
+			}
+		});
+
+		this.addCommand({
+			id: 'open-journal',
+			name: "Open today's journal",
+			callback: () => {
+				this.taskManager.openJournalNote();
+			}
+		});
+
+		this.addCommand({
+			id: 'open-tasks',
+			name: 'Open tasks index',
+			callback: () => {
+				this.taskManager.openTasksMoc();
 			}
 		});
 
@@ -87,6 +121,53 @@ export default class WorkLogPlugin extends Plugin {
 			}
 		);
 		modal.open();
+	}
+
+	private openTaskModal(): void {
+		const modal = new TaskModal(
+			this.app,
+			this.settings,
+			this.autoLinker,
+			async (task: TaskEntry) => {
+				await this.addTask(task);
+			}
+		);
+		modal.open();
+	}
+
+	private async addTask(task: TaskEntry): Promise<void> {
+		try {
+			await this.taskManager.addTask(task);
+
+			if (task.relatedNote) {
+				this.showTaskSuccessNotice(`Task added to [[${task.relatedNote}]]`, task);
+			} else {
+				this.showTaskSuccessNotice(`Task added to journal for ${task.date}`, task);
+			}
+		} catch (error) {
+			console.error('Failed to add task:', error);
+			new Notice('Failed to add task. Check console for details.');
+			throw error;
+		}
+	}
+
+	private showTaskSuccessNotice(message: string, task: TaskEntry): void {
+		const fragment = document.createDocumentFragment();
+		fragment.appendText(message + ' ');
+		const link = document.createElement('a');
+		link.textContent = 'View';
+		link.addEventListener('click', () => {
+			if (task.relatedNote) {
+				const file = this.app.metadataCache.getFirstLinkpathDest(task.relatedNote, '');
+				if (file) {
+					this.app.workspace.getLeaf(false).openFile(file);
+				}
+			} else {
+				this.taskManager.openJournalNote(task.date);
+			}
+		});
+		fragment.appendChild(link);
+		new Notice(fragment, 5000);
 	}
 
 	private async addEntry(entry: LogEntry): Promise<void> {
@@ -159,6 +240,7 @@ export default class WorkLogPlugin extends Plugin {
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 		this.logManager.updateSettings(this.settings);
+		this.taskManager.updateSettings(this.settings);
 		this.registerCategoryCommands();
 	}
 }

@@ -185,6 +185,78 @@ export class WorkLogSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		// ============ TASKS ============
+		containerEl.createEl('h2', { text: 'Tasks' });
+
+		new Setting(containerEl)
+			.setName('Journal note folder')
+			.setDesc('Folder where journal notes are created (leave empty for vault root)')
+			.addText(text => text
+				.setPlaceholder('e.g., Journal')
+				.setValue(this.plugin.settings.taskJournalFolder)
+				.onChange((value) => {
+					this.plugin.settings.taskJournalFolder = value;
+					this.debouncedSave();
+				}));
+
+		new Setting(containerEl)
+			.setName('Journal note suffix')
+			.setDesc('Appended to the date for journal filenames (e.g., "2026-02-10 Journal.md")')
+			.addText(text => text
+				.setPlaceholder(' Journal')
+				.setValue(this.plugin.settings.taskJournalSuffix)
+				.onChange((value) => {
+					this.plugin.settings.taskJournalSuffix = value;
+					this.debouncedSave();
+				}));
+
+		new Setting(containerEl)
+			.setName('Tasks MOC path')
+			.setDesc('Path to the Tasks index note (created on first use)')
+			.addText(text => text
+				.setPlaceholder('Tasks.md')
+				.setValue(this.plugin.settings.tasksMocPath)
+				.onChange((value) => {
+					this.plugin.settings.tasksMocPath = value || 'Tasks.md';
+					this.debouncedSave();
+				}));
+
+		new Setting(containerEl)
+			.setName('Urgency threshold (days)')
+			.setDesc('Tasks due within this many days are automatically marked urgent')
+			.addDropdown(dropdown => {
+				for (let i = 1; i <= 14; i++) {
+					dropdown.addOption(String(i), `${i} day${i > 1 ? 's' : ''}`);
+				}
+				dropdown.setValue(String(this.plugin.settings.taskUrgencyThresholdDays));
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.taskUrgencyThresholdDays = parseInt(value, 10);
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Task section heading (related notes)')
+			.setDesc('Heading under which tasks are inserted in related notes')
+			.addText(text => text
+				.setPlaceholder('## Tasks')
+				.setValue(this.plugin.settings.taskSectionHeading)
+				.onChange((value) => {
+					this.plugin.settings.taskSectionHeading = value || '## Tasks';
+					this.debouncedSave();
+				}));
+
+		new Setting(containerEl)
+			.setName('Task section heading (journal notes)')
+			.setDesc('Heading under which tasks are inserted in journal notes')
+			.addText(text => text
+				.setPlaceholder('## Tasks')
+				.setValue(this.plugin.settings.taskJournalSectionHeading)
+				.onChange((value) => {
+					this.plugin.settings.taskJournalSectionHeading = value || '## Tasks';
+					this.debouncedSave();
+				}));
+
 		// ============ CATEGORIES ============
 		containerEl.createEl('h2', { text: 'Categories' });
 

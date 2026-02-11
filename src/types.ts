@@ -15,6 +15,16 @@ export interface LogEntry {
 	timestamp: number;      // Unix timestamp for ordering within same day
 }
 
+export interface TaskEntry {
+	date: string;              // YYYY-MM-DD (creation date / which journal it belongs to)
+	description: string;
+	urgent: boolean;
+	important: boolean;
+	dueDate?: string;          // YYYY-MM-DD
+	relatedNote?: string;      // Note name (task line written to this note)
+	timestamp: number;
+}
+
 export interface WorkLogSettings {
 	// File settings
 	logFilePath: string;
@@ -41,6 +51,14 @@ export interface WorkLogSettings {
 
 	// Entry separators
 	separateEntriesWithBlankLine: boolean;
+
+	// Task settings
+	taskJournalFolder: string;
+	taskJournalSuffix: string;
+	tasksMocPath: string;
+	taskUrgencyThresholdDays: number;
+	taskSectionHeading: string;
+	taskJournalSectionHeading: string;
 }
 
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
@@ -102,6 +120,14 @@ export const DEFAULT_SETTINGS: WorkLogSettings = {
 
 	// Entry separators
 	separateEntriesWithBlankLine: true,
+
+	// Task settings
+	taskJournalFolder: '',
+	taskJournalSuffix: ' Journal',
+	tasksMocPath: 'Tasks.md',
+	taskUrgencyThresholdDays: 3,
+	taskSectionHeading: '## Tasks',
+	taskJournalSectionHeading: '## Tasks',
 };
 
 export function getCategoryConfig(categories: CategoryConfig[], id: string): CategoryConfig | undefined {
@@ -110,4 +136,36 @@ export function getCategoryConfig(categories: CategoryConfig[], id: string): Cat
 
 export function getCategoryLabel(categories: CategoryConfig[], id: string): string {
 	return getCategoryConfig(categories, id)?.label ?? id;
+}
+
+/**
+ * Map Eisenhower quadrant to Obsidian Tasks priority (dataview format).
+ * Urgency ranks higher than importance.
+ */
+export function eisenhowerToPriority(urgent: boolean, important: boolean): string {
+	if (urgent && important) return 'highest'; // Q1: Do First
+	if (urgent && !important) return 'high';   // Q2: Delegate
+	if (!urgent && important) return 'low';    // Q3: Schedule
+	return '';                                  // Q4: Low Priority — none
+}
+
+/**
+ * Format a TaskEntry as a markdown task line compatible with Obsidian Tasks plugin.
+ * Uses dataview inline field format: [created:: date], [due:: date], [priority:: level]
+ */
+export function formatTaskLine(task: TaskEntry): string {
+	const parts: string[] = [`- [ ] ${task.description}`];
+
+	const priority = eisenhowerToPriority(task.urgent, task.important);
+	if (priority) {
+		parts.push(`[priority:: ${priority}]`);
+	}
+
+	if (task.dueDate) {
+		parts.push(`[due:: ${task.dueDate}]`);
+	}
+
+	parts.push(`[created:: ${task.date}]`);
+
+	return parts.join(' ');
 }
