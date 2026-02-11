@@ -295,9 +295,9 @@ export class LogManager {
 				// Append at end of notes section
 				const beforeNextSection = content.substring(0, notesSectionEnd).trimEnd();
 				const afterNextSection = content.substring(notesSectionEnd);
-				return beforeNextSection + '\n\n' + newSubsection + afterNextSection;
+				return beforeNextSection + '\n' + newSubsection + afterNextSection;
 			} else {
-				return content.substring(0, insertPosition) + newSubsection + '\n' + content.substring(insertPosition);
+				return content.substring(0, insertPosition).trimEnd() + '\n' + newSubsection + content.substring(insertPosition);
 			}
 		}
 	}

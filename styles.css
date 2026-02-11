@@ -249,3 +249,83 @@
 	border-top: none;
 	padding: 0.25rem 0;
 }
+
+/* ============ Task Modal ============ */
+
+/* Priority Section */
+.work-log-priority-section {
+	margin-bottom: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.work-log-priority-label {
+	font-weight: 600;
+	margin-bottom: 0.25rem;
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+
+.work-log-priority-toggles {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.25rem;
+}
+
+.work-log-priority-btn {
+	padding: 0.3rem 1rem;
+	border-radius: 20px;
+	background: var(--background-modifier-border);
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.15s ease;
+	color: var(--text-muted);
+}
+
+.work-log-priority-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.work-log-priority-btn.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
+.work-log-priority-btn.is-active:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.work-log-quadrant-label {
+	margin-top: 0.25rem;
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.work-log-urgency-hint {
+	font-size: 0.75rem;
+	color: var(--text-warning, var(--text-accent));
+	margin-top: 0.15rem;
+	min-height: 1em;
+}
+
+/* Due Date Section */
+.work-log-due-date-section {
+	margin-bottom: 0.5rem;
+	padding: 0.35rem 0;
+}
+
+.work-log-due-date-section .work-log-quick-dates {
+	margin-bottom: 0.35rem;
+}
+
+.work-log-due-date-input {
+	padding: 0.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}

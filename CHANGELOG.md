@@ -5,6 +5,28 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-10
+
+### Added
+- **Task Management**: New task creation modal with Eisenhower Matrix prioritization (Urgent/Important toggles), optional due dates, and related note attachment
+- **Task Modal**: Description with auto-linking, pill-shaped priority toggle buttons with real-time quadrant label, related note autocomplete with existence indicator, due date quick buttons with dynamic weekday names
+- **Dynamic Due Date Buttons**: Quick select shows Today, Tomorrow, Day after, plus remaining weekdays of the current work week by name (e.g., Thu, Fri), and 1 week
+- **Due Date Urgency**: Tasks due within the configurable threshold (default: 3 days) automatically toggle the Urgent flag with a hint label
+- **Journal Notes**: Tasks without a related note are written to auto-created daily journal notes (e.g., `2026-02-10 Journal.md`) with Obsidian Tasks query blocks for old/new tasks
+- **Tasks MOC**: Auto-created Tasks index note (`Tasks.md`) with query blocks grouping tasks by Eisenhower quadrant
+- **Dataview Inline Fields**: Task metadata uses `[priority:: level]`, `[due:: date]`, `[created:: date]` format for compatibility with Obsidian Tasks and Dataview plugins
+- **Task Commands**: `Create task`, `Open today's journal`, `Open tasks index`
+- **Task Ribbon Icon**: Check-square icon for quick task creation
+- **Task Settings**: Journal note folder, journal note suffix, Tasks MOC path, urgency threshold (1–14 days), task section headings for related notes and journal notes
+
+### Fixed
+- **Related note date spacing**: Removed extra blank line between date sections (`### [[date]]`) in related notes
+
+### Changed
+- **esbuild charset**: Added `charset: "utf8"` to preserve emoji characters as literal UTF-8 in the build output
+
+---
+
 ## [1.2.0] - 2026-02-06
 
 ### Fixed

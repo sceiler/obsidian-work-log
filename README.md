@@ -37,6 +37,37 @@ Fully configurable via Settings → Categories. Add, edit, reorder, or remove ca
 
 Each category has a label, description, and placeholder text that you can customize. Reorder categories to control the dropdown order in the entry modal. Quick-add commands automatically update when you modify categories.
 
+### Task Management
+
+Create tasks with Eisenhower Matrix prioritization, due dates, and related note integration. Tasks are written as Obsidian Tasks-compatible markdown using Dataview inline field format.
+
+Access via the ribbon icon (check-square) or Command Palette (`Work Log: Create task`):
+
+- **Description**: Free-form text with automatic wiki-link detection
+- **Priority**: Toggle `Important` and `Urgent` independently — the Eisenhower quadrant label updates in real time
+- **Related Note**: Autocomplete search — tasks are written to this note under `## Tasks`. Without a related note, tasks go to the daily journal note
+- **Due Date**: Quick buttons (Today, Tomorrow, Day after, remaining weekdays, 1 week) plus a date picker. Due dates within the urgency threshold automatically toggle `Urgent`
+- **Keyboard Shortcuts**: `Cmd/Ctrl+Enter` to submit, `Escape` to cancel
+
+#### Eisenhower Priority Mapping
+
+| Quadrant | Urgent | Important | Dataview Field | Tasks Filter |
+|----------|--------|-----------|----------------|-------------|
+| Do First | yes | yes | `[priority:: highest]` | `priority is highest` |
+| Delegate | yes | no | `[priority:: high]` | `priority is high` |
+| Schedule | no | yes | `[priority:: low]` | `priority is low` |
+| Low Priority | no | no | *(none)* | `priority is none` |
+
+#### Task Output Format
+
+```markdown
+- [ ] Review demo repo [priority:: high] [due:: 2026-02-13] [created:: 2026-02-10]
+```
+
+#### Journal Notes
+
+Tasks without a related note are written to a daily journal note (e.g., `2026-02-10 Journal.md`). Journal notes are auto-created with Obsidian Tasks query blocks for old/new tasks. A Tasks MOC (`Tasks.md`) is also auto-created on first use, grouping tasks by Eisenhower quadrant.
+
 ### Output Format
 
 **work-log.md** (main log):
@@ -138,6 +169,17 @@ Access settings via Settings → Work Log.
 |---------|---------|-------------|
 | Enable auto-linking | `true` | Convert note names to `[[wiki links]]` |
 
+### Tasks
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Journal note folder | *(empty)* | Folder where journal notes are created |
+| Journal note suffix | ` Journal` | Appended to date for journal filenames |
+| Tasks MOC path | `Tasks.md` | Path to the Tasks index note |
+| Urgency threshold (days) | `3` | Tasks due within this many days auto-toggle urgent |
+| Task section heading (related notes) | `## Tasks` | Heading for tasks in related notes |
+| Task section heading (journal notes) | `## Tasks` | Heading for tasks in journal notes |
+
 ### Categories
 
 Manage your categories in Settings → Work Log → Categories:
@@ -155,6 +197,9 @@ Manage your categories in Settings → Work Log → Categories:
 | `Work Log: Add work log entry` | Open the entry modal |
 | `Work Log: Open work log` | Open the work log file |
 | `Work Log: Quick add: <Category>` | Open modal with a category pre-selected |
+| `Work Log: Create task` | Open the task creation modal |
+| `Work Log: Open today's journal` | Open (or create) today's journal note |
+| `Work Log: Open tasks index` | Open (or create) the Tasks MOC |
 
 A quick-add command is automatically registered for each configured category. When you add, remove, or rename categories in settings, the commands update accordingly.
 
@@ -275,7 +320,9 @@ work-log/
 │   ├── main.ts               # Plugin entry point
 │   ├── settings.ts           # Settings tab UI
 │   ├── entry-modal.ts        # Entry modal with date picker
-│   ├── log-manager.ts        # File operations
+│   ├── task-modal.ts         # Task modal with priority & due date
+│   ├── log-manager.ts        # Work log file operations
+│   ├── task-manager.ts       # Task file operations
 │   ├── auto-linker.ts        # Wiki-link detection
 │   ├── note-suggest.ts       # Autocomplete component
 │   └── types.ts              # TypeScript interfaces
