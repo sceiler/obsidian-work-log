@@ -86,7 +86,7 @@ export class TaskManager {
 			await this.app.vault.createFolder(folder);
 		}
 
-		const content = `${this.settings.taskSectionHeading}\n\n${taskLine}\n`;
+		const content = `${this.settings.taskSectionHeading}\n${taskLine}\n`;
 		await this.app.vault.create(path, content);
 		const file = this.app.vault.getAbstractFileByPath(path);
 
@@ -120,24 +120,45 @@ export class TaskManager {
 		const match = content.match(headingPattern);
 
 		if (!match || match.index === undefined) {
-			// Heading doesn't exist — insert before the last same-level heading,
-			// so ## Tasks lands before ## Notes in journals
+			// Heading doesn't exist — insert after ## Notes section content,
+			// so ## Tasks lands between ## Notes and ## Meetings/## People/etc.
 			const headingLevel = heading.match(/^#+/)?.[0] ?? '##';
-			const sameLevelPattern = new RegExp(`^#{${headingLevel.length}} [^#]`, 'gm');
-			let lastHeadingMatch: RegExpExecArray | null = null;
-			let m;
-			while ((m = sameLevelPattern.exec(content)) !== null) {
-				lastHeadingMatch = m;
+			const levelLen = headingLevel.length;
+
+			// Find ## Notes heading, then find where its section ends
+			const notesSectionHeading = this.settings.relatedNoteSectionHeading || '## Notes';
+			const escapedNotes = notesSectionHeading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const notesPattern = new RegExp(`^${escapedNotes}\\s*$`, 'm');
+			const notesMatch = content.match(notesPattern);
+
+			if (notesMatch && notesMatch.index !== undefined) {
+				// Find the next same-level heading after ## Notes
+				const afterNotesStart = notesMatch.index + notesMatch[0].length;
+				const afterNotes = content.substring(afterNotesStart);
+				const nextSameLevelPattern = new RegExp(`^#{${levelLen}} [^#]`, 'm');
+				const nextMatch = afterNotes.match(nextSameLevelPattern);
+
+				if (nextMatch && nextMatch.index !== undefined) {
+					// Insert right before the next same-level heading after ## Notes
+					const insertPos = afterNotesStart + nextMatch.index;
+					const before = content.substring(0, insertPos).trimEnd();
+					const after = content.substring(insertPos);
+					return before + '\n\n' + heading + '\n' + taskLine + '\n\n' + after;
+				}
 			}
 
-			if (lastHeadingMatch) {
-				const before = content.substring(0, lastHeadingMatch.index).trimEnd();
-				const after = content.substring(lastHeadingMatch.index);
-				return before + '\n\n' + heading + '\n\n' + taskLine + '\n\n' + after;
+			// Fallback: no ## Notes found, insert before the first same-level heading
+			const sameLevelPattern = new RegExp(`^#{${levelLen}} [^#]`, 'gm');
+			const firstHeadingMatch = sameLevelPattern.exec(content);
+
+			if (firstHeadingMatch) {
+				const before = content.substring(0, firstHeadingMatch.index).trimEnd();
+				const after = content.substring(firstHeadingMatch.index);
+				return before + '\n\n' + heading + '\n' + taskLine + '\n\n' + after;
 			}
 
 			// No headings at same level — append at end
-			return content.trimEnd() + '\n\n' + heading + '\n\n' + taskLine + '\n';
+			return content.trimEnd() + '\n\n' + heading + '\n' + taskLine + '\n';
 		}
 
 		// Find the end of this section (next heading of same or higher level, or EOF)
