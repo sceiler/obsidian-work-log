@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Task Settings**: Journal note folder, journal note suffix, Tasks MOC path, urgency threshold (1–14 days), task section headings for related notes and journal notes
 
 ### Fixed
+- **Task heading placement in related notes**: `## Tasks` section is now inserted after `## Notes` (before `## Meetings`) instead of at the end of the note
 - **Related note date spacing**: Removed extra blank line between date sections (`### [[date]]`) in related notes
 
 ### Changed
