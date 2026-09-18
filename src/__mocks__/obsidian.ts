@@ -2,6 +2,10 @@
  * Minimal Obsidian API mock for testing.
  * Only mocks the surface area actually used by the plugin.
  */
+import { load, dump } from 'js-yaml';
+
+export const parseYaml = (value: string): unknown => load(value);
+export const stringifyYaml = (value: unknown): string => dump(value);
 
 export class TFile {
 	path: string;
@@ -56,7 +60,15 @@ export class Vault {
 		this.files.set(file.path, content);
 	}
 
+	async process(file: TFile, fn: (content: string) => string): Promise<string> {
+		if (!this.files.has(file.path)) throw new Error('File missing');
+		const next = fn(this.files.get(file.path)!);
+		this.files.set(file.path, next);
+		return next;
+	}
+
 	async create(path: string, content: string): Promise<TFile> {
+		if (this.files.has(path)) throw new Error('File already exists');
 		this.files.set(path, content);
 		return new TFile(path);
 	}

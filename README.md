@@ -23,6 +23,26 @@ Access via the ribbon icon or Command Palette (`Work Log: Add work log entry`):
 - **Keyboard Shortcuts**: `Cmd/Ctrl+Enter` to submit (hint shown on button), `Escape` to cancel
 - **Error Handling**: Validation messages, loading state during save, modal stays open on failure
 
+### Review suggestions from Codex
+
+The bundled `work-log-review` skill researches work, updates, and concrete interactions across available Gmail, Slack, Index, and local notes. It stages Markdown drafts in `Work Log Inbox`; the plugin handles review and submission.
+
+1. Copy `skills/work-log-review` into your Codex skills directory (`~/.codex/skills` by default).
+2. Add `local.json` inside the installed skill with your vault context:
+
+   ```json
+   {"vault": "/absolute/path/to/your/vault", "timezone": "Europe/Berlin", "owner": "Your name"}
+   ```
+
+3. Invoke `$work-log-review review today` (or a date range) in Codex. Source access uses the connectors available in that session; the report identifies unavailable or partial sources.
+4. In Obsidian, click the **Work Log: N to review** status item, the review ribbon icon, or run **Work Log: Review suggestions**.
+5. Edit text, date, category, and related destinations. Inspect source links, dismiss unwanted suggestions, and select the entries to include. Draft edits save automatically.
+6. Click **Submit selected entries**. Entries go into the central log and the selected existing reference pages using your configured dated sections.
+
+Pending entries require explicit submission. Previously applied/dismissed drafts remain in the inbox as history and are excluded from the pending queue. Failed submissions stay available to retry; successful destination writes are not duplicated. Once submission starts, the approved text is locked so retries finish the same entry everywhere. Keep the invisible `work-log:suggestion` markers in final notes for retry protection.
+
+**Settings → Review inbox folder** controls where drafts are discovered. The helper reads this setting and your categories. The skill uses Python 3.9+ and no Python dependencies. See its [handoff contract](skills/work-log-review/references/handoff.md) for the batch format. Editing an applied note manually does not synchronize later edits across copies.
+
 ### Categories
 
 Fully configurable via Settings → Categories. Add, edit, reorder, or remove categories to match your workflow. Default categories tailored for Sales Engineering:

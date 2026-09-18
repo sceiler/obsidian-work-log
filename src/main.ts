@@ -1,4 +1,4 @@
-import { Notice, Plugin } from 'obsidian';
+import { Notice, Plugin, TAbstractFile } from 'obsidian';
 import { DEFAULT_SETTINGS, DEFAULT_CATEGORIES, getCategoryLabel, type Category, type LogEntry, type TaskEntry, type WorkLogSettings } from './types';
 import { WorkLogSettingTab } from './settings';
 import { LogManager } from './log-manager';
@@ -6,6 +6,8 @@ import { TaskManager } from './task-manager';
 import { EntryModal } from './entry-modal';
 import { TaskModal } from './task-modal';
 import { AutoLinker } from './auto-linker';
+import { ReviewInbox } from './review-inbox';
+import { ReviewModal } from './review-modal';
 
 export default class WorkLogPlugin extends Plugin {
 	settings: WorkLogSettings;
@@ -13,12 +15,33 @@ export default class WorkLogPlugin extends Plugin {
 	private taskManager: TaskManager;
 	private autoLinker: AutoLinker;
 	private registeredCategoryCommandIds: Set<string> = new Set();
+	private reviewInbox: ReviewInbox;
+	private reviewStatus: HTMLElement;
+	private reviewTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
 		this.logManager = new LogManager(this.app, this.settings);
 		this.taskManager = new TaskManager(this.app, this.settings);
+		this.reviewInbox = new ReviewInbox(this.app, this.settings, this.logManager);
+		const openReview = () => new ReviewModal(this.app, this.reviewInbox, this.settings, () => this.scheduleReviewCount()).open();
+		this.addCommand({ id: 'review-suggestions', name: 'Review suggestions', callback: openReview });
+		this.addRibbonIcon('list-checks', 'Review work log suggestions', openReview);
+		this.reviewStatus = this.addStatusBarItem();
+		this.reviewStatus.addClass('work-log-review-status');
+		this.reviewStatus.setAttribute('role', 'button');
+		this.reviewStatus.setAttribute('tabindex', '0');
+		this.reviewStatus.onclick = openReview;
+		this.reviewStatus.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openReview(); } };
+		const inboxChanged = (file: TAbstractFile) => { if (this.reviewInbox.contains(file.path)) this.scheduleReviewCount(); };
+		this.registerEvent(this.app.vault.on('create', inboxChanged));
+		this.registerEvent(this.app.vault.on('modify', inboxChanged));
+		this.registerEvent(this.app.vault.on('delete', inboxChanged));
+		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+			if (this.reviewInbox.contains(file.path) || this.reviewInbox.contains(oldPath)) this.scheduleReviewCount();
+		}));
+		this.app.workspace.onLayoutReady(() => this.scheduleReviewCount());
 
 		// Register AutoLinker as child component for proper lifecycle management
 		this.autoLinker = new AutoLinker(this.app);
@@ -86,6 +109,21 @@ export default class WorkLogPlugin extends Plugin {
 
 	onunload(): void {
 		// AutoLinker cleanup is handled by addChild() lifecycle
+		if (this.reviewTimer !== null) clearTimeout(this.reviewTimer);
+	}
+
+	private scheduleReviewCount(): void {
+		if (this.reviewTimer !== null) clearTimeout(this.reviewTimer);
+		this.reviewTimer = setTimeout(async () => {
+			this.reviewTimer = null;
+			try {
+				const scan = await this.reviewInbox.scan();
+				const count = scan.entries.filter(item => item.suggestion.status === 'pending' || item.suggestion.status === 'applying').length;
+				this.reviewStatus.setText(`Work Log: ${count} to review${scan.errors.length ? ` · ${scan.errors.length} invalid` : ''}`);
+			} catch {
+				this.reviewStatus.setText('Work Log: check review inbox settings');
+			}
+		}, 300);
 	}
 
 	private registerCategoryCommands(): void {
@@ -241,6 +279,8 @@ export default class WorkLogPlugin extends Plugin {
 		await this.saveData(this.settings);
 		this.logManager.updateSettings(this.settings);
 		this.taskManager.updateSettings(this.settings);
+		this.reviewInbox.updateSettings(this.settings);
+		this.scheduleReviewCount();
 		this.registerCategoryCommands();
 	}
 }

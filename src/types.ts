@@ -12,6 +12,7 @@ export interface LogEntry {
 	category: Category;
 	description: string;
 	relatedNote?: string;   // Note name to also log this entry to (e.g., "John Doe")
+	relatedNotes?: string[]; // Explicit destinations for reviewed suggestions
 	timestamp: number;      // Unix timestamp for ordering within same day
 }
 
@@ -28,6 +29,7 @@ export interface TaskEntry {
 export interface WorkLogSettings {
 	// File settings
 	logFilePath: string;
+	reviewInboxFolder: string;
 
 	// Entry settings
 	defaultCategory: Category;
@@ -97,6 +99,7 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
 export const DEFAULT_SETTINGS: WorkLogSettings = {
 	// File settings
 	logFilePath: 'work-log.md',
+	reviewInboxFolder: 'Work Log Inbox',
 
 	// Entry settings
 	defaultCategory: 'customer',
