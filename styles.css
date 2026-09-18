@@ -1,5 +1,24 @@
 /* Work Log Plugin Styles */
 
+.work-log-review-modal { width: 900px; max-width: 95vw; max-height: 90vh; }
+.work-log-review-modal .modal-content { display: flex; flex-direction: column; max-height: calc(90vh - 64px); min-height: 0; overflow: hidden; }
+.work-log-review-status { cursor: pointer; }
+.work-log-review-list { display: grid; gap: 1rem; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.work-log-review-card { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 1rem; }
+.work-log-review-heading { font-weight: 600; margin-bottom: 0.5rem; }
+.work-log-review-heading label { display: flex; align-items: center; gap: 0.5rem; }
+.work-log-review-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.work-log-review-fields label { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+.work-log-review-row { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem; }
+.work-log-review-text { width: 100%; min-height: 100px; resize: vertical; font-family: var(--font-text); line-height: 1.5; }
+.work-log-review-destination { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0.35rem 0; overflow-wrap: anywhere; }
+.work-log-review-destinations { margin-bottom: 0.75rem; }
+.work-log-review-sources { margin: 0.75rem 0; }
+.work-log-review-save-status { color: var(--text-muted); font-size: var(--font-ui-small); min-height: 1.5em; margin-bottom: 0.5rem; }
+.work-log-review-footer { display: flex; flex-shrink: 0; justify-content: flex-end; gap: 0.5rem; padding: 1rem 0 0; background: var(--background-primary); border-top: 1px solid var(--background-modifier-border); margin-top: 1rem; }
+.work-log-review-message { white-space: pre-wrap; margin-bottom: 0.75rem; }
+.work-log-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
 /* Target the modal container for size */
 .work-log-modal-container {
 	width: 900px;

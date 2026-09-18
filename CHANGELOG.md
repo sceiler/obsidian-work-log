@@ -5,6 +5,18 @@ All notable changes to the Work Log plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-18
+
+### Added
+- Markdown review inbox with editable suggestions, explicit selection/submission, source links, and multiple existing related-note destinations.
+- Pending-count status item, review ribbon icon, command, and configurable inbox folder.
+- Resumable submissions with per-destination duplicate protection and frozen approved text.
+- Companion `work-log-review` Codex skill, atomic no-overwrite staging helper, and per-run source coverage reports.
+- Tests for draft persistence, stale edits, invalid inputs, duplicate IDs, interrupted writes, and the Python-to-plugin handoff.
+
+### Changed
+- Work log and related-note writes now use Obsidian's atomic `Vault.process()` update API.
+
 ## [1.3.0] - 2026-02-10
 
 ### Added
