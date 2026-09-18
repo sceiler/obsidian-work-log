@@ -34,6 +34,8 @@ describe('Markdown review inbox', () => {
 		inbox = new ReviewInbox(app as any, settings, manager);
 		app.vault._setFile(personPath, originalPerson);
 		app.vault._setFile(companyPath, '# Existing company page\n');
+		app.metadataCache._setLinkResolution('Alex Example', new TFile(personPath));
+		app.metadataCache._setLinkResolution('Example Co', new TFile(companyPath));
 		app.vault._setFile('work-log.md', '# work-log\n\n## [[2026-09-17]]\n\n- Existing entry\n');
 	});
 
@@ -63,7 +65,7 @@ describe('Markdown review inbox', () => {
 	it('writes reviewed text once to the log and every explicit target, preserving page content', async () => {
 		const applied = await inbox.apply(await stage());
 		expect(applied.suggestion.status).toBe('applied');
-		expect(await read('work-log.md')).toContain('[[References/Alex Example]], [[References/Example Co]]');
+		expect(await read('work-log.md')).toContain('[[Alex Example]], [[Example Co]]');
 		expect(await read(personPath)).toContain('### [[2026-09-18]]');
 		expect(await read(personPath)).toContain(originalPerson.split('\n\n')[0]);
 		expect(await read(personPath)).toContain('## Personal\n\nExisting private notes.');
@@ -72,6 +74,24 @@ describe('Markdown review inbox', () => {
 		for (const path of ['work-log.md', personPath, companyPath]) {
 			expect((await read(path)).split('<!-- work-log:suggestion:wl-example-01 -->')).toHaveLength(2);
 		}
+	});
+
+	it('uses a short display name without redirecting an ambiguous link', async () => {
+		app.vault._setFile('Other/Alex Example.md', '# Different person');
+		app.metadataCache._setLinkResolution('Alex Example', new TFile('Other/Alex Example.md'));
+		await inbox.apply(await stage());
+		expect(await read('work-log.md')).toContain('[[References/Alex Example|Alex Example]]');
+		expect(await read('Other/Alex Example.md')).toBe('# Different person');
+		expect(await read(personPath)).toContain('Agreed on the next step.');
+	});
+
+	it('allows manual entries after a reviewed entry without disturbing its retry marker', async () => {
+		await inbox.apply(await stage());
+		await manager.addEntry({ date: '2026-09-18', category: 'customer', description: 'My later manual entry.', timestamp: Date.now() });
+		const content = await read('work-log.md');
+		expect(content.indexOf('My later manual entry.')).toBeGreaterThan(content.indexOf('<!-- work-log:suggestion:wl-example-01 -->'));
+		expect(content.split('<!-- work-log:suggestion:wl-example-01 -->')).toHaveLength(2);
+		expect(content.split('## [[2026-09-18]]')).toHaveLength(2);
 	});
 
 	it('resumes after a related-note write fails without duplicating successful writes', async () => {

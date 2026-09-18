@@ -135,17 +135,23 @@ export class AbstractInputSuggest<T> {
 	getSuggestions(_query: string): T[] { return []; }
 	renderSuggestion(_item: T, _el: HTMLElement): void {}
 	selectSuggestion(_item: T): void {}
+	close(): void {}
 }
 
 export class Modal {
 	app: App;
 	contentEl: HTMLElement;
+	modalEl: HTMLElement;
 	constructor(app: App) {
 		this.app = app;
-		this.contentEl = {} as HTMLElement;
+		this.modalEl = document.createElement('div');
+		this.contentEl = document.createElement('div');
+		this.modalEl.appendChild(this.contentEl);
 	}
-	open(): void {}
-	close(): void {}
+	open(): void { document.body.appendChild(this.modalEl); this.onOpen(); }
+	close(): void { this.onClose(); this.modalEl.remove(); }
+	onOpen(): void {}
+	onClose(): void {}
 }
 
 export class PluginSettingTab {

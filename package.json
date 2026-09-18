@@ -27,6 +27,7 @@
 		"@types/node": "^24.0.0",
 		"esbuild": "^0.27.0",
 		"eslint": "^9.39.0",
+		"happy-dom": "^20.14.5",
 		"js-yaml": "^4.1.1",
 		"tslib": "^2.8.0",
 		"typescript": "^5.8.0",

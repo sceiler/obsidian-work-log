@@ -9,6 +9,8 @@ interface ReviewCard {
 	draft: SuggestionEdit;
 	selected: boolean;
 	saving: Promise<void>;
+	pendingEdit?: SuggestionEdit;
+	busy: boolean;
 	error: string;
 	status: HTMLElement;
 	element: HTMLElement;
@@ -76,7 +78,7 @@ export class ReviewModal extends Modal {
 		const card: ReviewCard = {
 			file, draft: { title: suggestion.title, date: suggestion.date, category: suggestion.category,
 				related_notes: [...suggestion.related_notes], description: suggestion.description },
-			selected: false, saving: Promise.resolve(), error: '', status, element: cardEl, fields
+			selected: false, saving: Promise.resolve(), busy: false, error: '', status, element: cardEl, fields
 		};
 		this.cards.push(card);
 		checkbox.onchange = () => { card.selected = checkbox.checked; this.updateSubmit(); };
@@ -141,26 +143,35 @@ export class ReviewModal extends Modal {
 		const dismiss = cardEl.createEl('button', { text: 'Dismiss' });
 		dismiss.disabled = fields.disabled;
 		dismiss.onclick = async () => {
-			if (this.submitting) return;
-			dismiss.disabled = true;
-			fields.disabled = true;
+			if (card.busy) return;
+			this.setBusy(card, true);
 			await card.saving;
 			try {
 				if (card.error) throw new Error(card.error);
 				card.file = await this.inbox.dismiss(card.file);
 				cardEl.remove(); this.cards = this.cards.filter(item => item !== card); this.updateSubmit(); this.done();
-			} catch (error) { this.showError(error); dismiss.disabled = false; fields.disabled = false; }
+			} catch (error) { this.showError(error); }
+			finally { this.setBusy(card, false); this.updateSubmit(); }
 		};
 	}
 
 	private save(card: ReviewCard): void {
-		const edit = { ...card.draft, related_notes: [...card.draft.related_notes] };
+		// Keep only the newest edit while a disk write is in flight. Typing must not
+		// leave one queued vault write per keystroke for submission to wait through.
+		const alreadySaving = card.pendingEdit !== undefined;
+		card.pendingEdit = { ...card.draft, related_notes: [...card.draft.related_notes] };
 		card.status.setText('Saving draft…');
+		if (alreadySaving) return;
 		card.saving = card.saving.then(async () => {
 			if (card.error) throw new Error(card.error);
-			card.file = await this.inbox.save(card.file, edit);
+			while (card.pendingEdit) {
+				const edit = card.pendingEdit;
+				card.file = await this.inbox.save(card.file, edit);
+				if (card.pendingEdit === edit) card.pendingEdit = undefined;
+			}
 			card.status.setText('Draft saved');
 		}).catch(error => {
+			card.pendingEdit = undefined;
 			card.error = error instanceof Error ? error.message : String(error);
 			card.status.setText(`Draft not saved: ${card.error}`);
 			if (this.closed) new Notice(`Work Log draft not saved: ${card.error}`);
@@ -169,42 +180,61 @@ export class ReviewModal extends Modal {
 
 	private updateSubmit(): void {
 		if (!this.submitButton) return;
-		const count = this.cards.filter(card => card.selected).length;
-		this.submitButton.textContent = `Submit selected entries (${count})`;
+		const count = this.cards.filter(card => card.selected && !card.busy).length;
+		this.submitButton.textContent = this.submitting ? 'Submitting entries…' : `Submit selected entries (${count})`;
 		this.submitButton.disabled = !count || this.submitting;
+	}
+
+	private setBusy(card: ReviewCard, busy: boolean): void {
+		card.busy = busy;
+		card.fields.disabled = busy || card.file.suggestion.status !== 'pending';
+		card.element.querySelector<HTMLInputElement>('input[type="checkbox"]')!.disabled = busy;
+		const dismiss = card.element.querySelector<HTMLButtonElement>(':scope > button')!;
+		dismiss.disabled = card.fields.disabled;
 	}
 
 	private async submit(): Promise<void> {
 		if (this.submitting) return;
+		const selected = this.cards.filter(card => card.selected && !card.busy);
+		if (!selected.length) return;
 		this.submitting = true;
-		this.contentEl.querySelectorAll('button, input, select, textarea').forEach(el => (el as HTMLInputElement).disabled = true);
-		this.updateSubmit();
-		await Promise.all(this.cards.map(card => card.saving));
-		if (this.cards.some(card => card.error)) {
-			this.submitting = false;
-			this.contentEl.querySelectorAll('button, input, select, textarea').forEach(el => (el as HTMLInputElement).disabled = false);
-			for (const card of this.cards) card.fields.disabled = card.file.suggestion.status !== 'pending';
-			this.updateSubmit();
-			this.showError('Some draft edits could not be saved. Copy those edits before reopening the review to resolve the conflict.');
-			return;
+		for (const card of selected) {
+			this.setBusy(card, true);
+			card.status.setText('Waiting to submit…');
 		}
+		this.updateSubmit();
 		let applied = 0;
 		const errors: string[] = [];
-		for (const card of this.cards.filter(item => item.selected)) {
-			await card.saving;
-			try {
-				if (card.error) throw new Error(card.error);
-				card.file = await this.inbox.apply(card.file);
-				applied++;
-			} catch (error) { errors.push(`${card.draft.title}: ${error instanceof Error ? error.message : String(error)}`); }
+		try {
+			for (const [index, card] of selected.entries()) {
+				try {
+					await card.saving;
+					if (card.error) throw new Error(card.error);
+					card.status.setText('Submitting…');
+					if (!this.closed) this.message?.setText(`Submitting ${index + 1} of ${selected.length}… You can keep reviewing other drafts or close this window.`);
+					card.file = await this.inbox.apply(card.file);
+					applied++;
+					card.element.remove();
+					this.cards = this.cards.filter(item => item !== card);
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					errors.push(`${card.draft.title}: ${message}`);
+					// Recover a frozen, partly written submission for retry without
+					// reloading unrelated cards and losing their edits or focus.
+					try {
+						const latest = (await this.inbox.scan()).entries.find(item => item.path === card.file.path);
+						if (latest?.suggestion.status === 'applying') card.file = latest;
+					} catch { /* Keep the stale version: approval will refuse to overwrite it. */ }
+					card.status.setText(`Not submitted: ${message}${card.file.suggestion.status === 'applying' ? ' Approved text is locked; submit again to retry.' : ''}`);
+				} finally { this.setBusy(card, false); }
+			}
+		} finally {
+			this.submitting = false;
+			this.updateSubmit();
+			this.done();
 		}
-		// Wait for unselected drafts too before replacing the window contents.
-		await Promise.all(this.cards.map(card => card.saving));
-		this.submitting = false;
-		this.done();
-		try { await this.load(); } catch (error) { this.showError(error); }
 		const message = [`${applied} ${applied === 1 ? 'entry' : 'entries'} submitted.`, ...errors].join('\n');
-		this.message?.setText(message);
+		if (!this.closed) this.message?.setText(message);
 		new Notice(message);
 	}
 

@@ -39,6 +39,8 @@ The bundled `work-log-review` skill researches work, updates, and concrete inter
 5. Edit text, date, category, and related destinations. Inspect source links, dismiss unwanted suggestions, and select the entries to include. Draft edits save automatically.
 6. Click **Submit selected entries**. Entries go into the central log and the selected existing reference pages using your configured dated sections.
 
+Only the selected entries are locked while submitting. You can keep editing or dismissing other drafts, or close the window while approved writes finish. Rapid edits are combined while a save is in progress. Related-note links show the note name; a path is retained behind an alias when needed to distinguish duplicate names.
+
 Pending entries require explicit submission. Previously applied/dismissed drafts remain in the inbox as history and are excluded from the pending queue. Failed submissions stay available to retry; successful destination writes are not duplicated. Once submission starts, the approved text is locked so retries finish the same entry everywhere. Keep the invisible `work-log:suggestion` markers in final notes for retry protection.
 
 **Settings → Review inbox folder** controls where drafts are discovered. The helper reads this setting and your categories. The skill uses Python 3.9+ and no Python dependencies. See its [handoff contract](skills/work-log-review/references/handoff.md) for the batch format. Editing an applied note manually does not synchronize later edits across copies.

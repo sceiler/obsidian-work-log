@@ -61,7 +61,7 @@ export class LogManager {
 		await this.app.vault.process(file, content => {
 			if (content.includes(marker)) return content;
 			const marked = { ...entry, description: `${entry.description}\n${marker}` };
-			return central ? this.insertEntryToLog(content, marked) : this.insertEntryToRelatedNote(content, marked);
+			return central ? this.insertEntryToLog(content, marked, path) : this.insertEntryToRelatedNote(content, marked);
 		});
 	}
 
@@ -173,9 +173,9 @@ export class LogManager {
 	/**
 	 * Insert entry into main work log in ASCENDING order (oldest first, read top to bottom)
 	 */
-	private insertEntryToLog(content: string, entry: LogEntry): string {
+	private insertEntryToLog(content: string, entry: LogEntry, sourcePath = this.settings.logFilePath): string {
 		const dateHeading = this.buildDateHeading(entry.date, true);
-		const entryLine = this.formatLogEntry(entry);
+		const entryLine = this.formatLogEntry(entry, sourcePath);
 		const datePattern = this.buildDatePattern(true);
 
 		// Check if date heading exists
@@ -357,7 +357,7 @@ export class LogManager {
 	/**
 	 * Format entry for main work log
 	 */
-	private formatLogEntry(entry: LogEntry): string {
+	private formatLogEntry(entry: LogEntry, sourcePath: string): string {
 		const description = this.formatMultiLineDescription(entry.description);
 
 		// Build metadata parts: category, related note, timestamp
@@ -366,7 +366,13 @@ export class LogManager {
 			parts.push(`**${getCategoryLabel(this.settings.categories, entry.category)}**`);
 		}
 		for (const note of entry.relatedNotes ?? (entry.relatedNote ? [entry.relatedNote] : [])) {
-			parts.push(`[[${note.replace(/\.md$/, '')}]]`);
+			const path = note.replace(/\.md$/, '');
+			const name = path.split('/').pop()!;
+			const resolved = this.app.metadataCache.getFirstLinkpathDest(name, sourcePath);
+			// Keep exact destinations internally, but use the ordinary short link
+			// when it resolves correctly from this log. Disambiguate with an alias.
+			parts.push(path === name || resolved?.path === `${path}.md`
+				? `[[${name}]]` : `[[${path}|${name}]]`);
 		}
 		if (this.settings.showTimestamps) {
 			parts.push(moment(entry.timestamp).format('HH:mm'));
