@@ -85,6 +85,39 @@ describe('Markdown review inbox', () => {
 		expect(await read(personPath)).toContain('Agreed on the next step.');
 	});
 
+	it.each([
+		['References/People/Zoë Müller.md', 'Zoë Müller'],
+		['References/People/Renée Example.md', 'Renée Example'],
+		['References/People/Alex Example-Smith.md', 'Alex Example-Smith'],
+		['References/Companies/Example.Co.md', 'Example.Co'],
+		['References/Companies/EXAMPLE.md', 'EXAMPLE'],
+		['Projects/Research & Development (Phase 2).md', 'Research & Development (Phase 2)'],
+		['Projects/Platform migration 2026.md', 'Platform migration 2026'],
+		['Standalone note.md', 'Standalone note'],
+	])('uses the correct short link for any note name: %s', async (target, name) => {
+		app.vault._setFile(target, '# Existing target\n');
+		app.metadataCache._setLinkResolution(name, new TFile(target));
+		const applied = await inbox.apply(await stage({ related_notes: [target] }));
+		expect(await read('work-log.md')).toContain(`**Customer** ([[${name}]]):`);
+		expect(applied.suggestion.submission?.related_notes).toEqual([target]);
+		expect(await read(target)).toContain('Agreed on the next step.');
+	});
+
+	it.each([
+		['References/People/Zoë Müller.md', 'Zoë Müller'],
+		['References/Companies/Example.Co.md', 'Example.Co'],
+		['Projects/Platform migration.md', 'Platform migration'],
+	])('preserves the destination and short label for duplicate names: %s', async (target, name) => {
+		const other = `Archive/${name}.md`;
+		app.vault._setFile(target, '# Intended target\n');
+		app.vault._setFile(other, '# Other target\n');
+		app.metadataCache._setLinkResolution(name, new TFile(other));
+		await inbox.apply(await stage({ related_notes: [target] }));
+		expect(await read('work-log.md')).toContain(`[[${target.slice(0, -3)}|${name}]]`);
+		expect(await read(target)).toContain('Agreed on the next step.');
+		expect(await read(other)).toBe('# Other target\n');
+	});
+
 	it('allows manual entries after a reviewed entry without disturbing its retry marker', async () => {
 		await inbox.apply(await stage());
 		await manager.addEntry({ date: '2026-09-18', category: 'customer', description: 'My later manual entry.', timestamp: Date.now() });
