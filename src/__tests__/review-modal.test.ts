@@ -126,6 +126,79 @@ describe('review window selection and slow vault writes', () => {
 		expect(selectAll().indeterminate).toBe(false);
 	});
 
+	it.each([false, true])('removes selected suggestions while keeping history and existing log entries (select all: %s)', async all => {
+		const originalLog = '# Work log\n\n- Existing entry\n';
+		app.vault._setFile(DEFAULT_SETTINGS.logFilePath, originalLog);
+		const write = vi.spyOn(manager, 'writeReviewedEntry');
+		const [first, second] = cards();
+		expect(button('Remove selected').disabled).toBe(true);
+		if (all) selectAll().click(); else select(first);
+		expect(button('Remove selected').textContent).toBe(`Remove selected (${all ? 2 : 1})`);
+		button('Remove selected').click();
+		expect(button('Remove selected').disabled).toBe(true);
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toHaveLength(all ? 0 : 1);
+		if (!all) expect(cards()[0]).toBe(second);
+		expect(parseSuggestion(await read(1))?.status).toBe('dismissed');
+		expect(parseSuggestion(await read(1))?.description).toBe('Original 1');
+		expect(parseSuggestion(await read(2))?.status).toBe(all ? 'dismissed' : 'pending');
+		expect(write).not.toHaveBeenCalled();
+		expect(await app.vault.read(new TFile(DEFAULT_SETTINGS.logFilePath))).toBe(originalLog);
+		expect(document.querySelector('.work-log-review-message')?.textContent).toBe(`${all ? '2 suggestions' : '1 suggestion'} removed from review.`);
+		modal.close();
+		modal.open();
+		await vi.waitFor(() => expect(selectAll()).not.toBeNull());
+		expect(cards()).toHaveLength(all ? 0 : 1);
+		expect(button('Remove selected').disabled).toBe(true);
+	});
+
+	it('waits for selected draft edits before removal and lets other drafts be edited and the window closed', async () => {
+		const gate = deferred();
+		const save = inbox.save.bind(inbox);
+		vi.spyOn(inbox, 'save').mockImplementation(async (...args) => {
+			if (args[0].path === path(1)) await gate.promise;
+			return save(...args);
+		});
+		const dismiss = vi.spyOn(inbox, 'dismiss');
+		const [first, second] = cards();
+		edit(first, 'Edited before removal');
+		select(first);
+		button('Remove selected').click();
+		expect(first.querySelector('fieldset')!.disabled).toBe(true);
+		expect(second.querySelector('fieldset')!.disabled).toBe(false);
+		expect(button('Close').disabled).toBe(false);
+		expect(dismiss).not.toHaveBeenCalled();
+		edit(second, 'Unrelated edit during removal');
+		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.description).toBe('Unrelated edit during removal'));
+		button('Close').click();
+		gate.resolve();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(parseSuggestion(await read(1))?.status).toBe('dismissed');
+		expect(parseSuggestion(await read(1))?.description).toBe('Edited before removal');
+		expect(parseSuggestion(await read(2))?.status).toBe('pending');
+		expect(cards()).toHaveLength(0);
+	});
+
+	it('keeps failed removals visible and retryable while removing the rest of the selection', async () => {
+		const dismiss = vi.spyOn(inbox, 'dismiss').mockRejectedValueOnce(new Error('Disk failure'));
+		const first = cards()[0];
+		selectAll().click();
+		button('Remove selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toEqual([first]);
+		expect(first.textContent).toContain('Not removed: Disk failure');
+		expect(first.querySelector('fieldset')!.disabled).toBe(false);
+		expect(button('Remove selected').textContent).toBe('Remove selected (1)');
+		expect(button('Remove selected').disabled).toBe(false);
+		expect(parseSuggestion(await read(1))?.status).toBe('pending');
+		expect(parseSuggestion(await read(2))?.status).toBe('dismissed');
+		dismiss.mockRestore();
+		button('Remove selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledTimes(2));
+		expect(cards()).toHaveLength(0);
+		expect(parseSuggestion(await read(1))?.status).toBe('dismissed');
+	});
+
 	it('keeps other drafts and Close usable, preserving edits, focus and selection after submit', async () => {
 		const gate = deferred();
 		const write = manager.writeReviewedEntry.bind(manager);
@@ -213,10 +286,18 @@ describe('review window selection and slow vault writes', () => {
 		expect(first.textContent).toContain('submit again to retry');
 		expect(second.querySelector('fieldset')!.disabled).toBe(false);
 		expect(button('Submit selected').disabled).toBe(false);
+		expect(button('Remove selected').disabled).toBe(true);
+		expect(first.querySelector<HTMLButtonElement>(':scope > button')!.disabled).toBe(true);
+		select(second);
+		expect(button('Remove selected').textContent).toBe('Remove selected (1)');
+		button('Remove selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledTimes(2));
+		expect(cards()).toEqual([first]);
+		expect(parseSuggestion(await read(1))?.status).toBe('applying');
+		expect(parseSuggestion(await read(2))?.status).toBe('dismissed');
 		write.mockRestore();
 		button('Submit selected').click();
-		await vi.waitFor(() => expect(cards()).toHaveLength(1));
-		expect(cards()[0]).toBe(second);
+		await vi.waitFor(() => expect(cards()).toHaveLength(0));
 		expect(parseSuggestion(await read(1))?.status).toBe('applied');
 	});
 
@@ -231,16 +312,20 @@ describe('review window selection and slow vault writes', () => {
 		expect(parseSuggestion(await read(1))?.status).toBe('pending');
 	});
 
-	it('allows an unrelated draft to be dismissed while a submission is pending', async () => {
+	it('allows bulk removal of other drafts while a submission is pending', async () => {
 		const gate = deferred();
 		const write = manager.writeReviewedEntry.bind(manager);
 		vi.spyOn(manager, 'writeReviewedEntry').mockImplementation(async (...args) => { await gate.promise; return write(...args); });
-		const [first, second] = cards();
+		const first = cards()[0];
 		select(first);
 		button('Submit selected').click();
 		await vi.waitFor(() => expect(manager.writeReviewedEntry).toHaveBeenCalled());
-		second.querySelector<HTMLButtonElement>(':scope > button')!.click();
+		selectAll().click();
+		expect(button('Remove selected').textContent).toBe('Remove selected (1)');
+		button('Remove selected').click();
 		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.status).toBe('dismissed'));
+		expect(cards()).toEqual([first]);
+		expect(parseSuggestion(await read(1))?.status).toBe('applying');
 		gate.resolve();
 		await vi.waitFor(() => expect(cards()).toHaveLength(0));
 	});

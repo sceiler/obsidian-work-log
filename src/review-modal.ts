@@ -24,6 +24,7 @@ export class ReviewModal extends Modal {
 	private submitting = false;
 	private closed = false;
 	private submitButton?: HTMLButtonElement;
+	private removeButton?: HTMLButtonElement;
 	private selectAllCheckbox?: HTMLInputElement;
 	private message?: HTMLElement;
 	constructor(app: App, private inbox: ReviewInbox, private settings: WorkLogSettings, private done: () => void) { super(app); }
@@ -48,7 +49,7 @@ export class ReviewModal extends Modal {
 		this.cards = [];
 		this.contentEl.empty();
 		this.contentEl.createEl('h2', { text: 'Review work log suggestions' });
-		this.contentEl.createEl('p', { text: 'Edit your drafts, select the entries to include, then submit. Draft edits save automatically.' });
+		this.contentEl.createEl('p', { text: 'Edit your drafts, then select entries to submit or remove. Draft edits save automatically. Removed suggestions stay in review history.' });
 		this.message = this.contentEl.createDiv({ cls: 'work-log-review-message', attr: { role: 'status', 'aria-live': 'polite' } });
 		for (const error of scan.errors) {
 			const line = this.contentEl.createDiv({ cls: 'work-log-error-msg' });
@@ -73,6 +74,8 @@ export class ReviewModal extends Modal {
 		const list = this.contentEl.createDiv({ cls: 'work-log-review-list' });
 		for (const file of active) this.renderCard(list, file);
 		const footer = this.contentEl.createDiv({ cls: 'work-log-review-footer' });
+		this.removeButton = footer.createEl('button', { text: 'Remove selected', cls: 'work-log-review-remove' });
+		this.removeButton.onclick = () => { void this.removeSuggestions(this.cards.filter(card => card.selected)); };
 		const close = footer.createEl('button', { text: 'Close' });
 		close.onclick = () => this.close();
 		this.submitButton = footer.createEl('button', { text: 'Submit selected entries', cls: 'mod-cta' });
@@ -154,19 +157,9 @@ export class ReviewModal extends Modal {
 				event.preventDefault(); void this.app.workspace.openLinkText(source.target, file.path, false);
 			};
 		}
-		const dismiss = cardEl.createEl('button', { text: 'Dismiss' });
+		const dismiss = cardEl.createEl('button', { text: 'Remove suggestion' });
 		dismiss.disabled = fields.disabled;
-		dismiss.onclick = async () => {
-			if (card.busy) return;
-			this.setBusy(card, true);
-			await card.saving;
-			try {
-				if (card.error) throw new Error(card.error);
-				card.file = await this.inbox.dismiss(card.file);
-				cardEl.remove(); this.cards = this.cards.filter(item => item !== card); this.updateSubmit(); this.done();
-			} catch (error) { this.showError(error); }
-			finally { this.setBusy(card, false); this.updateSubmit(); }
-		};
+		dismiss.onclick = () => { void this.removeSuggestions([card]); };
 	}
 
 	private save(card: ReviewCard): void {
@@ -200,6 +193,11 @@ export class ReviewModal extends Modal {
 			this.selectAllCheckbox.indeterminate = count > 0 && count < selectable.length;
 			this.selectAllCheckbox.disabled = !selectable.length;
 		}
+		if (this.removeButton) {
+			const removable = selectable.filter(card => card.selected && card.file.suggestion.status === 'pending').length;
+			this.removeButton.textContent = `Remove selected (${removable})`;
+			this.removeButton.disabled = !removable;
+		}
 		if (!this.submitButton) return;
 		this.submitButton.textContent = this.submitting ? 'Submitting entries…' : `Submit selected entries (${count})`;
 		this.submitButton.disabled = !count || this.submitting;
@@ -212,6 +210,35 @@ export class ReviewModal extends Modal {
 		const dismiss = card.element.querySelector<HTMLButtonElement>(':scope > button')!;
 		dismiss.disabled = card.fields.disabled;
 		this.updateSubmit();
+	}
+
+	private async removeSuggestions(cards: ReviewCard[]): Promise<void> {
+		const removable = cards.filter(card => !card.busy && card.file.suggestion.status === 'pending');
+		if (!removable.length) return;
+		for (const card of removable) {
+			this.setBusy(card, true);
+			card.status.setText('Removing suggestion…');
+		}
+		let removed = 0;
+		const errors: string[] = [];
+		for (const card of removable) {
+			try {
+				await card.saving;
+				if (card.error) throw new Error(card.error);
+				card.file = await this.inbox.dismiss(card.file);
+				card.element.remove();
+				this.cards = this.cards.filter(item => item !== card);
+				removed++;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				card.status.setText(`Not removed: ${message}`);
+				errors.push(`${card.draft.title}: ${message}`);
+			} finally { this.setBusy(card, false); }
+		}
+		this.done();
+		const message = [`${removed} ${removed === 1 ? 'suggestion' : 'suggestions'} removed from review.`, ...errors].join('\n');
+		if (!this.closed) this.message?.setText(message);
+		new Notice(message);
 	}
 
 	private async submit(): Promise<void> {

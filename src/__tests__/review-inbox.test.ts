@@ -163,10 +163,11 @@ describe('Markdown review inbox', () => {
 		expect((await read('work-log.md')).split('Agreed on the next step.')).toHaveLength(2);
 	});
 
-	it('rejects stale edits and approval when the Markdown has changed elsewhere', async () => {
+	it('rejects stale edits, removal and approval when the Markdown has changed elsewhere', async () => {
 		const stale = await stage();
 		const latest = await stage({ description: 'External edit' });
 		await expect(inbox.save(stale, { ...stale.suggestion, description: 'Stale text' })).rejects.toThrow('changed elsewhere');
+		await expect(inbox.dismiss(stale)).rejects.toThrow('changed elsewhere');
 		await expect(inbox.apply(stale)).rejects.toThrow('changed elsewhere');
 		expect(await read(draftPath)).toBe(latest.raw);
 	});

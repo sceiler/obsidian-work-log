@@ -16,7 +16,8 @@
 .work-log-review-destinations { margin-bottom: 0.75rem; }
 .work-log-review-sources { margin: 0.75rem 0; }
 .work-log-review-save-status { color: var(--text-muted); font-size: var(--font-ui-small); min-height: 1.5em; margin-bottom: 0.5rem; }
-.work-log-review-footer { display: flex; flex-shrink: 0; justify-content: flex-end; gap: 0.5rem; padding: 1rem 0 0; background: var(--background-primary); border-top: 1px solid var(--background-modifier-border); margin-top: 1rem; }
+.work-log-review-footer { display: flex; flex-wrap: wrap; flex-shrink: 0; justify-content: flex-end; gap: 0.5rem; padding: 1rem 0 0; background: var(--background-primary); border-top: 1px solid var(--background-modifier-border); margin-top: 1rem; }
+.work-log-review-remove { margin-right: auto; }
 .work-log-review-message { white-space: pre-wrap; margin-bottom: 0.75rem; }
 .work-log-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 

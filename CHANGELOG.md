@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Markdown review inbox with editable suggestions, explicit selection/submission, source links, and multiple existing related-note destinations.
+- Remove individual or selected pending suggestions from review while retaining dismissal history for duplicate prevention.
 - Pending-count status item, review ribbon icon, command, and configurable inbox folder.
 - Resumable submissions with per-destination duplicate protection and frozen approved text.
 - Companion `work-log-review` Codex skill, atomic no-overwrite staging helper, and per-run source coverage reports.
