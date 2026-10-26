@@ -25,7 +25,7 @@ Access via the ribbon icon or Command Palette (`Work Log: Add work log entry`):
 
 ### Review suggestions from Codex
 
-The bundled `work-log-review` skill researches work, updates, and concrete interactions across available Gmail, Slack, Index, and local notes. It stages Markdown drafts in `Work Log Inbox`; the plugin handles review and submission.
+The optional companion `work-log-review` skill runs in Codex and researches work, updates, and concrete interactions across available Gmail, Slack, Index, and local notes. It stages Markdown drafts in `Work Log Inbox`; the Obsidian plugin handles review and submission.
 
 1. Copy `skills/work-log-review` into your Codex skills directory (`~/.codex/skills` by default).
 2. Add `local.json` inside the installed skill with your vault context:
@@ -34,12 +34,12 @@ The bundled `work-log-review` skill researches work, updates, and concrete inter
    {"vault": "/absolute/path/to/your/vault", "timezone": "Europe/Berlin", "owner": "Your name"}
    ```
 
-3. Invoke `$work-log-review review today` (or a date range) in Codex. Source access uses the connectors available in that session; the report identifies unavailable or partial sources.
+3. Invoke `$work-log-review review today` (or a date range), or `$work-log-review <Slack URL>` in Codex. For Slack links, the skill retrieves the message and surrounding conversation, derives event dates, checks duplicates, and stages focused suggestions with the supplied source URL. Consecutive messages about the same contribution are read together, including unthreaded channel/DM messages, so a link to one fragment can produce a single complete suggestion. Multiple links and URL-only follow-ups during a work-log review are supported. Source access uses the connectors available in that session; the report identifies unavailable or partial sources.
 4. In Obsidian, click the **Work Log: N to review** status item, the review ribbon icon, or run **Work Log: Review suggestions**.
-5. Edit text, date, category, and related destinations. Inspect source links, dismiss unwanted suggestions, and select the entries to include. Draft edits save automatically.
+5. Edit text, date, category, and related destinations. Inspect source links and select entries individually or with **Select all suggestions**. Use **Remove suggestion** or **Remove selected** to clear unwanted pending suggestions from review. Draft edits save automatically.
 6. Click **Submit selected entries**. Entries go into the central log and the selected existing reference pages using your configured dated sections.
 
-Only the selected entries are locked while submitting. You can keep editing or dismissing other drafts, or close the window while approved writes finish. Rapid edits are combined while a save is in progress. Related-note links show the note name; a path is retained behind an alias when needed to distinguish duplicate names.
+Only the selected entries are locked while submitting. You can keep editing or removing other drafts, or close the window while approved writes finish. Removal retains dismissed suggestions in the inbox as review history. Rapid edits are combined while a save is in progress. Related-note links show the note name; a path is retained behind an alias when needed to distinguish duplicate names.
 
 Pending entries require explicit submission. Previously applied/dismissed drafts remain in the inbox as history and are excluded from the pending queue. Failed submissions stay available to retry; successful destination writes are not duplicated. Once submission starts, the approved text is locked so retries finish the same entry everywhere. Keep the invisible `work-log:suggestion` markers in final notes for retry protection.
 

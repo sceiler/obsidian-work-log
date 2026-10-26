@@ -1,4 +1,4 @@
 interface:
   display_name: "Work Log Review"
-  short_description: "Prepare work-log drafts for review in Obsidian"
-  default_prompt: "Use $work-log-review to review today and prepare suggestions for approval in Obsidian."
+  short_description: "Turn Slack links or date ranges into work-log drafts"
+  default_prompt: "Use $work-log-review to turn the supplied Slack links or requested date range into pending suggestions for review in Obsidian."
