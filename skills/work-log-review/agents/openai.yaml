@@ -1,0 +1,4 @@
+interface:
+  display_name: "Work Log Review"
+  short_description: "Prepare work-log drafts for review in Obsidian"
+  default_prompt: "Use $work-log-review to review today and prepare suggestions for approval in Obsidian."

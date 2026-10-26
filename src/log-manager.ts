@@ -25,9 +25,7 @@ export class LogManager {
 	 */
 	async addEntry(entry: LogEntry): Promise<void> {
 		const file = await this.getOrCreateLogFile();
-		const content = await this.app.vault.read(file);
-		const newContent = this.insertEntryToLog(content, entry);
-		await this.app.vault.modify(file, newContent);
+		await this.app.vault.process(file, content => this.insertEntryToLog(content, entry));
 	}
 
 	/**
@@ -46,9 +44,25 @@ export class LogManager {
 			}
 		}
 
-		const content = await this.app.vault.read(noteFile);
-		const newContent = this.insertEntryToRelatedNote(content, entry);
-		await this.app.vault.modify(noteFile, newContent);
+		await this.app.vault.process(noteFile, content => this.insertEntryToRelatedNote(content, entry));
+	}
+
+	/** A marker travels with each copy, so interrupted submissions can safely resume. */
+	async writeReviewedEntry(path: string, entry: LogEntry, id: string, central: boolean): Promise<void> {
+		if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{7,79}$/.test(id)) throw new Error('Invalid suggestion ID');
+		let file = this.app.vault.getAbstractFileByPath(path);
+		if (!file && central) {
+			const folder = path.substring(0, path.lastIndexOf('/'));
+			if (folder && !this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
+			file = await this.app.vault.create(path, '# work-log\n');
+		}
+		if (!(file instanceof TFile)) throw new Error(`Destination not found: ${path}`);
+		const marker = `<!-- work-log:suggestion:${id} -->`;
+		await this.app.vault.process(file, content => {
+			if (content.includes(marker)) return content;
+			const marked = { ...entry, description: `${entry.description}\n${marker}` };
+			return central ? this.insertEntryToLog(content, marked, path) : this.insertEntryToRelatedNote(content, marked);
+		});
 	}
 
 	/**
@@ -159,9 +173,9 @@ export class LogManager {
 	/**
 	 * Insert entry into main work log in ASCENDING order (oldest first, read top to bottom)
 	 */
-	private insertEntryToLog(content: string, entry: LogEntry): string {
+	private insertEntryToLog(content: string, entry: LogEntry, sourcePath = this.settings.logFilePath): string {
 		const dateHeading = this.buildDateHeading(entry.date, true);
-		const entryLine = this.formatLogEntry(entry);
+		const entryLine = this.formatLogEntry(entry, sourcePath);
 		const datePattern = this.buildDatePattern(true);
 
 		// Check if date heading exists
@@ -343,7 +357,7 @@ export class LogManager {
 	/**
 	 * Format entry for main work log
 	 */
-	private formatLogEntry(entry: LogEntry): string {
+	private formatLogEntry(entry: LogEntry, sourcePath: string): string {
 		const description = this.formatMultiLineDescription(entry.description);
 
 		// Build metadata parts: category, related note, timestamp
@@ -351,8 +365,14 @@ export class LogManager {
 		if (this.settings.showCategoryInLog) {
 			parts.push(`**${getCategoryLabel(this.settings.categories, entry.category)}**`);
 		}
-		if (entry.relatedNote) {
-			parts.push(`[[${entry.relatedNote}]]`);
+		for (const note of entry.relatedNotes ?? (entry.relatedNote ? [entry.relatedNote] : [])) {
+			const path = note.replace(/\.md$/, '');
+			const name = path.split('/').pop()!;
+			const resolved = this.app.metadataCache.getFirstLinkpathDest(name, sourcePath);
+			// Keep exact destinations internally, but use the ordinary short link
+			// when it resolves correctly from this log. Disambiguate with an alias.
+			parts.push(path === name || resolved?.path === `${path}.md`
+				? `[[${name}]]` : `[[${path}|${name}]]`);
 		}
 		if (this.settings.showTimestamps) {
 			parts.push(moment(entry.timestamp).format('HH:mm'));

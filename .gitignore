@@ -11,3 +11,8 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local plugin settings and private skill configuration
+data.json
+skills/work-log-review/local.json
+__pycache__/

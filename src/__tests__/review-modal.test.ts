@@ -1,0 +1,332 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { App, TFile } from '../__mocks__/obsidian';
+import { LogManager } from '../log-manager';
+import { ReviewInbox } from '../review-inbox';
+import { ReviewModal } from '../review-modal';
+import { parseSuggestion, serializeSuggestion } from '../suggestion';
+import { DEFAULT_SETTINGS } from '../types';
+
+// Obsidian's DOM convenience methods on a real DOM implementation.
+Object.assign(HTMLElement.prototype, {
+	createEl(this: HTMLElement, tag: string, options: any = {}) {
+		const el = document.createElement(tag);
+		if (options.text) el.textContent = options.text;
+		if (options.cls) el.className = options.cls;
+		for (const key of ['type', 'value', 'href']) if (options[key] !== undefined) (el as any)[key] = options[key];
+		for (const [key, value] of Object.entries(options.attr ?? {})) el.setAttribute(key, String(value));
+		this.appendChild(el);
+		return el;
+	},
+	createDiv(this: HTMLElement, options: any) { return this.createEl('div', options); },
+	createSpan(this: HTMLElement, options: any) { return this.createEl('span', options); },
+	setText(this: HTMLElement, text: string) { this.textContent = text; },
+	empty(this: HTMLElement) { this.replaceChildren(); },
+	addClass(this: HTMLElement, ...classes: string[]) { this.classList.add(...classes); },
+});
+
+function deferred() {
+	let resolve!: () => void;
+	const promise = new Promise<void>(done => { resolve = done; });
+	return { promise, resolve };
+}
+
+describe('review window selection and slow vault writes', () => {
+	let app: App;
+	let inbox: ReviewInbox;
+	let manager: LogManager;
+	let modal: ReviewModal;
+	let done = vi.fn(() => {});
+	const path = (number: number) => `Work Log Inbox/wl-test-0${number}.md`;
+	const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article'));
+	const button = (name: string) => Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(el => el.textContent?.startsWith(name))!;
+	const select = (card: HTMLElement) => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+	const selectAll = () => document.querySelector<HTMLInputElement>('.work-log-review-select-all input')!;
+	const edit = (card: HTMLElement, text: string) => {
+		const input = card.querySelector('textarea')!;
+		input.value = text;
+		input.dispatchEvent(new Event('input'));
+	};
+	const read = (number: number) => app.vault.read(new TFile(path(number)));
+
+	beforeEach(async () => {
+		app = new App();
+		const settings = { ...DEFAULT_SETTINGS };
+		manager = new LogManager(app as any, settings);
+		inbox = new ReviewInbox(app as any, settings, manager);
+		done = vi.fn();
+		for (const number of [1, 2]) {
+			app.vault._setFile(path(number), serializeSuggestion({ work_log_suggestion: 1, id: `wl-test-0${number}`,
+				title: `Entry ${number}`, date: '2026-09-18', category: 'customer', related_notes: [], sources: [],
+				status: 'pending', description: `Original ${number}` }));
+		}
+		modal = new ReviewModal(app as any, inbox, settings, done);
+		modal.open();
+		await vi.waitFor(() => expect(cards()).toHaveLength(2));
+	});
+	afterEach(() => { modal.close(); document.body.replaceChildren(); vi.restoreAllMocks(); });
+
+	it('selects and clears all suggestions, reflecting individual selections with a mixed state', () => {
+		const all = selectAll();
+		const [first, second] = cards();
+		expect(all.checked).toBe(false);
+		expect(all.indeterminate).toBe(false);
+		expect(button('Submit selected').disabled).toBe(true);
+		all.click();
+		expect(cards().every(card => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked)).toBe(true);
+		expect(all.checked).toBe(true);
+		expect(button('Submit selected').textContent).toBe('Submit selected entries (2)');
+		all.click();
+		expect(cards().every(card => !card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked)).toBe(true);
+		expect(button('Submit selected').disabled).toBe(true);
+		select(first);
+		expect(all.checked).toBe(false);
+		expect(all.indeterminate).toBe(true);
+		select(second);
+		expect(all.checked).toBe(true);
+		expect(all.indeterminate).toBe(false);
+		select(first);
+		all.click();
+		expect(all.checked).toBe(true);
+		expect(all.indeterminate).toBe(false);
+		expect(first.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+	});
+
+	it('submits all selected suggestions and disables bulk selection when none remain', async () => {
+		selectAll().click();
+		button('Submit selected').click();
+		expect(selectAll().disabled).toBe(true);
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toHaveLength(0);
+		expect(selectAll().disabled).toBe(true);
+		expect(selectAll().checked).toBe(false);
+		expect(selectAll().indeterminate).toBe(false);
+		expect(button('Submit selected').disabled).toBe(true);
+		for (const number of [1, 2]) expect(parseSuggestion(await read(number))?.status).toBe('applied');
+		const log = await app.vault.read(new TFile(DEFAULT_SETTINGS.logFilePath));
+		expect(log).toContain('Original 1');
+		expect(log).toContain('Original 2');
+	});
+
+	it('updates bulk selection after dismissal and opens an empty inbox with it disabled', async () => {
+		const [first, second] = cards();
+		select(first);
+		second.querySelector<HTMLButtonElement>(':scope > button')!.click();
+		await vi.waitFor(() => expect(cards()).toHaveLength(1));
+		expect(selectAll().checked).toBe(true);
+		expect(selectAll().indeterminate).toBe(false);
+		first.querySelector<HTMLButtonElement>(':scope > button')!.click();
+		await vi.waitFor(() => expect(cards()).toHaveLength(0));
+		expect(selectAll().disabled).toBe(true);
+		modal.close();
+		modal.open();
+		await vi.waitFor(() => expect(selectAll()).not.toBeNull());
+		expect(selectAll().disabled).toBe(true);
+		expect(selectAll().checked).toBe(false);
+		expect(selectAll().indeterminate).toBe(false);
+	});
+
+	it.each([false, true])('removes selected suggestions while keeping history and existing log entries (select all: %s)', async all => {
+		const originalLog = '# Work log\n\n- Existing entry\n';
+		app.vault._setFile(DEFAULT_SETTINGS.logFilePath, originalLog);
+		const write = vi.spyOn(manager, 'writeReviewedEntry');
+		const [first, second] = cards();
+		expect(button('Remove selected').disabled).toBe(true);
+		if (all) selectAll().click(); else select(first);
+		expect(button('Remove selected').textContent).toBe(`Remove selected (${all ? 2 : 1})`);
+		button('Remove selected').click();
+		expect(button('Remove selected').disabled).toBe(true);
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toHaveLength(all ? 0 : 1);
+		if (!all) expect(cards()[0]).toBe(second);
+		expect(parseSuggestion(await read(1))?.status).toBe('dismissed');
+		expect(parseSuggestion(await read(1))?.description).toBe('Original 1');
+		expect(parseSuggestion(await read(2))?.status).toBe(all ? 'dismissed' : 'pending');
+		expect(write).not.toHaveBeenCalled();
+		expect(await app.vault.read(new TFile(DEFAULT_SETTINGS.logFilePath))).toBe(originalLog);
+		expect(document.querySelector('.work-log-review-message')?.textContent).toBe(`${all ? '2 suggestions' : '1 suggestion'} removed from review.`);
+		modal.close();
+		modal.open();
+		await vi.waitFor(() => expect(selectAll()).not.toBeNull());
+		expect(cards()).toHaveLength(all ? 0 : 1);
+		expect(button('Remove selected').disabled).toBe(true);
+	});
+
+	it('waits for selected draft edits before removal and lets other drafts be edited and the window closed', async () => {
+		const gate = deferred();
+		const save = inbox.save.bind(inbox);
+		vi.spyOn(inbox, 'save').mockImplementation(async (...args) => {
+			if (args[0].path === path(1)) await gate.promise;
+			return save(...args);
+		});
+		const dismiss = vi.spyOn(inbox, 'dismiss');
+		const [first, second] = cards();
+		edit(first, 'Edited before removal');
+		select(first);
+		button('Remove selected').click();
+		expect(first.querySelector('fieldset')!.disabled).toBe(true);
+		expect(second.querySelector('fieldset')!.disabled).toBe(false);
+		expect(button('Close').disabled).toBe(false);
+		expect(dismiss).not.toHaveBeenCalled();
+		edit(second, 'Unrelated edit during removal');
+		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.description).toBe('Unrelated edit during removal'));
+		button('Close').click();
+		gate.resolve();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(parseSuggestion(await read(1))?.status).toBe('dismissed');
+		expect(parseSuggestion(await read(1))?.description).toBe('Edited before removal');
+		expect(parseSuggestion(await read(2))?.status).toBe('pending');
+		expect(cards()).toHaveLength(0);
+	});
+
+	it('keeps failed removals visible and retryable while removing the rest of the selection', async () => {
+		const dismiss = vi.spyOn(inbox, 'dismiss').mockRejectedValueOnce(new Error('Disk failure'));
+		const first = cards()[0];
+		selectAll().click();
+		button('Remove selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toEqual([first]);
+		expect(first.textContent).toContain('Not removed: Disk failure');
+		expect(first.querySelector('fieldset')!.disabled).toBe(false);
+		expect(button('Remove selected').textContent).toBe('Remove selected (1)');
+		expect(button('Remove selected').disabled).toBe(false);
+		expect(parseSuggestion(await read(1))?.status).toBe('pending');
+		expect(parseSuggestion(await read(2))?.status).toBe('dismissed');
+		dismiss.mockRestore();
+		button('Remove selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledTimes(2));
+		expect(cards()).toHaveLength(0);
+		expect(parseSuggestion(await read(1))?.status).toBe('dismissed');
+	});
+
+	it('keeps other drafts and Close usable, preserving edits, focus and selection after submit', async () => {
+		const gate = deferred();
+		const write = manager.writeReviewedEntry.bind(manager);
+		vi.spyOn(manager, 'writeReviewedEntry').mockImplementation(async (...args) => { await gate.promise; return write(...args); });
+		const [first, second] = cards();
+		select(first);
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(manager.writeReviewedEntry).toHaveBeenCalled());
+		expect(first.querySelector('fieldset')!.disabled).toBe(true);
+		expect(second.querySelector('fieldset')!.disabled).toBe(false);
+		expect(button('Close').disabled).toBe(false);
+		expect(button('Submitting').disabled).toBe(true);
+		expect(selectAll().disabled).toBe(false);
+		expect(selectAll().checked).toBe(false);
+		expect(selectAll().indeterminate).toBe(false);
+		selectAll().click();
+		selectAll().click();
+		expect(first.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+		expect(second.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(false);
+		selectAll().click();
+		second.querySelector('textarea')!.focus();
+		edit(second, 'Edited while the other entry submits');
+		gate.resolve();
+		await vi.waitFor(() => expect(cards()).toHaveLength(1));
+		expect(cards()[0]).toBe(second);
+		expect(document.activeElement).toBe(second.querySelector('textarea'));
+		expect(second.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+		expect(selectAll().checked).toBe(true);
+		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.description).toBe('Edited while the other entry submits'));
+		expect(parseSuggestion(await read(1))?.status).toBe('applied');
+	});
+
+	it('does not wait for an unrelated draft save before or after submitting', async () => {
+		const gate = deferred();
+		const save = inbox.save.bind(inbox);
+		vi.spyOn(inbox, 'save').mockImplementation(async (...args) => { await gate.promise; return save(...args); });
+		const [first, second] = cards();
+		edit(second, 'Slow unrelated edit');
+		select(first);
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toHaveLength(1);
+		gate.resolve();
+		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.description).toBe('Slow unrelated edit'));
+	});
+
+	it('combines typing during a slow save and submits the latest text', async () => {
+		const gate = deferred();
+		const save = inbox.save.bind(inbox);
+		const saves = vi.spyOn(inbox, 'save').mockImplementation(async (...args) => { await gate.promise; return save(...args); });
+		const first = cards()[0];
+		edit(first, 'First edit');
+		await vi.waitFor(() => expect(saves).toHaveBeenCalledOnce());
+		for (let index = 0; index < 50; index++) edit(first, `Latest edit ${index}`);
+		select(first);
+		button('Submit selected').click();
+		gate.resolve();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(saves).toHaveBeenCalledTimes(2);
+		expect(parseSuggestion(await read(1))?.submission?.entry.description).toBe('Latest edit 49');
+	});
+
+	it('can close during submission while approved writes finish in the background', async () => {
+		const gate = deferred();
+		const write = manager.writeReviewedEntry.bind(manager);
+		vi.spyOn(manager, 'writeReviewedEntry').mockImplementation(async (...args) => { await gate.promise; return write(...args); });
+		select(cards()[0]);
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(manager.writeReviewedEntry).toHaveBeenCalled());
+		button('Close').click();
+		expect(document.querySelector('article')).toBeNull();
+		gate.resolve();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(parseSuggestion(await read(1))?.status).toBe('applied');
+		expect(document.querySelector('article')).toBeNull();
+	});
+
+	it('keeps failed submissions locked and retryable without rebuilding other drafts', async () => {
+		const write = vi.spyOn(manager, 'writeReviewedEntry').mockRejectedValueOnce(new Error('Disk failure'));
+		const [first, second] = cards();
+		select(first);
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(first.querySelector('fieldset')!.disabled).toBe(true);
+		expect(first.textContent).toContain('submit again to retry');
+		expect(second.querySelector('fieldset')!.disabled).toBe(false);
+		expect(button('Submit selected').disabled).toBe(false);
+		expect(button('Remove selected').disabled).toBe(true);
+		expect(first.querySelector<HTMLButtonElement>(':scope > button')!.disabled).toBe(true);
+		select(second);
+		expect(button('Remove selected').textContent).toBe('Remove selected (1)');
+		button('Remove selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledTimes(2));
+		expect(cards()).toEqual([first]);
+		expect(parseSuggestion(await read(1))?.status).toBe('applying');
+		expect(parseSuggestion(await read(2))?.status).toBe('dismissed');
+		write.mockRestore();
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(cards()).toHaveLength(0));
+		expect(parseSuggestion(await read(1))?.status).toBe('applied');
+	});
+
+	it('keeps invalid pending entries editable and reports the validation error', async () => {
+		const first = cards()[0];
+		edit(first, '');
+		select(first);
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(first.querySelector('fieldset')!.disabled).toBe(false);
+		expect(first.textContent).toContain('Entry text is required');
+		expect(parseSuggestion(await read(1))?.status).toBe('pending');
+	});
+
+	it('allows bulk removal of other drafts while a submission is pending', async () => {
+		const gate = deferred();
+		const write = manager.writeReviewedEntry.bind(manager);
+		vi.spyOn(manager, 'writeReviewedEntry').mockImplementation(async (...args) => { await gate.promise; return write(...args); });
+		const first = cards()[0];
+		select(first);
+		button('Submit selected').click();
+		await vi.waitFor(() => expect(manager.writeReviewedEntry).toHaveBeenCalled());
+		selectAll().click();
+		expect(button('Remove selected').textContent).toBe('Remove selected (1)');
+		button('Remove selected').click();
+		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.status).toBe('dismissed'));
+		expect(cards()).toEqual([first]);
+		expect(parseSuggestion(await read(1))?.status).toBe('applying');
+		gate.resolve();
+		await vi.waitFor(() => expect(cards()).toHaveLength(0));
+	});
+});

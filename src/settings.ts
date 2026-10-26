@@ -41,6 +41,12 @@ export class WorkLogSettingTab extends PluginSettingTab {
 					this.debouncedSave();
 				}));
 
+		new Setting(containerEl)
+			.setName('Review inbox folder')
+			.setDesc('Vault folder containing Markdown suggestions prepared by the work-log-review skill')
+			.addText(text => text.setPlaceholder('Work Log Inbox').setValue(this.plugin.settings.reviewInboxFolder)
+				.onChange(value => { this.plugin.settings.reviewInboxFolder = value.trim() || 'Work Log Inbox'; this.debouncedSave(); }));
+
 		// ============ ENTRY SETTINGS ============
 		containerEl.createEl('h2', { text: 'Entry Settings' });
 

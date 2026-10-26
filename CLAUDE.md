@@ -13,9 +13,16 @@ npm install          # Install dependencies
 npm run dev          # Watch mode (esbuild rebuilds on change)
 npm run build        # Type-check (tsc --noEmit) + production bundle
 npm run lint         # ESLint on src/
+npm run test:run     # Vitest, including the Python staging helper handoff
 ```
 
-There are no tests. The build output is `main.js` (committed, required by Obsidian). To test the plugin, symlink or copy the repo into an Obsidian vault's `.obsidian/plugins/work-log/` directory and reload Obsidian.
+Tests use an in-memory Obsidian API mock and temporary vaults; the staging-helper integration tests require Python 3.9+. The build output is `main.js` (generated and gitignored, required by Obsidian). To test the plugin, symlink or copy the repo into an Obsidian vault's `.obsidian/plugins/work-log/` directory and reload the plugin. If the user has prohibited controlling Obsidian, build locally and leave reloading to them.
+
+### Review inbox
+
+`suggestion.ts` defines the versioned Markdown contract. `review-inbox.ts` handles scanning, optimistic draft saves, dismissal, and resumable submission. `review-modal.ts` provides the editable review queue. `LogManager.writeReviewedEntry()` uses a per-entry HTML marker in every destination to prevent duplicate writes after interruption. Keep the frozen submission intact once status becomes `applying`.
+
+`skills/work-log-review/` is the companion Codex skill. Its standard-library Python helper validates all batch entries, creates Markdown atomically without replacing existing files, and writes a research coverage report. Private installation configuration is in the skill's gitignored `local.json`. Never commit real suggestions, research, personal notes, or plugin `data.json`.
 
 ## Architecture
 
