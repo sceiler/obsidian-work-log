@@ -31,7 +31,7 @@ function deferred() {
 	return { promise, resolve };
 }
 
-describe('review window during slow vault writes', () => {
+describe('review window selection and slow vault writes', () => {
 	let app: App;
 	let inbox: ReviewInbox;
 	let manager: LogManager;
@@ -41,6 +41,7 @@ describe('review window during slow vault writes', () => {
 	const cards = () => Array.from(document.querySelectorAll<HTMLElement>('article'));
 	const button = (name: string) => Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(el => el.textContent?.startsWith(name))!;
 	const select = (card: HTMLElement) => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+	const selectAll = () => document.querySelector<HTMLInputElement>('.work-log-review-select-all input')!;
 	const edit = (card: HTMLElement, text: string) => {
 		const input = card.querySelector('textarea')!;
 		input.value = text;
@@ -65,6 +66,66 @@ describe('review window during slow vault writes', () => {
 	});
 	afterEach(() => { modal.close(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 
+	it('selects and clears all suggestions, reflecting individual selections with a mixed state', () => {
+		const all = selectAll();
+		const [first, second] = cards();
+		expect(all.checked).toBe(false);
+		expect(all.indeterminate).toBe(false);
+		expect(button('Submit selected').disabled).toBe(true);
+		all.click();
+		expect(cards().every(card => card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked)).toBe(true);
+		expect(all.checked).toBe(true);
+		expect(button('Submit selected').textContent).toBe('Submit selected entries (2)');
+		all.click();
+		expect(cards().every(card => !card.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked)).toBe(true);
+		expect(button('Submit selected').disabled).toBe(true);
+		select(first);
+		expect(all.checked).toBe(false);
+		expect(all.indeterminate).toBe(true);
+		select(second);
+		expect(all.checked).toBe(true);
+		expect(all.indeterminate).toBe(false);
+		select(first);
+		all.click();
+		expect(all.checked).toBe(true);
+		expect(all.indeterminate).toBe(false);
+		expect(first.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+	});
+
+	it('submits all selected suggestions and disables bulk selection when none remain', async () => {
+		selectAll().click();
+		button('Submit selected').click();
+		expect(selectAll().disabled).toBe(true);
+		await vi.waitFor(() => expect(done).toHaveBeenCalledOnce());
+		expect(cards()).toHaveLength(0);
+		expect(selectAll().disabled).toBe(true);
+		expect(selectAll().checked).toBe(false);
+		expect(selectAll().indeterminate).toBe(false);
+		expect(button('Submit selected').disabled).toBe(true);
+		for (const number of [1, 2]) expect(parseSuggestion(await read(number))?.status).toBe('applied');
+		const log = await app.vault.read(new TFile(DEFAULT_SETTINGS.logFilePath));
+		expect(log).toContain('Original 1');
+		expect(log).toContain('Original 2');
+	});
+
+	it('updates bulk selection after dismissal and opens an empty inbox with it disabled', async () => {
+		const [first, second] = cards();
+		select(first);
+		second.querySelector<HTMLButtonElement>(':scope > button')!.click();
+		await vi.waitFor(() => expect(cards()).toHaveLength(1));
+		expect(selectAll().checked).toBe(true);
+		expect(selectAll().indeterminate).toBe(false);
+		first.querySelector<HTMLButtonElement>(':scope > button')!.click();
+		await vi.waitFor(() => expect(cards()).toHaveLength(0));
+		expect(selectAll().disabled).toBe(true);
+		modal.close();
+		modal.open();
+		await vi.waitFor(() => expect(selectAll()).not.toBeNull());
+		expect(selectAll().disabled).toBe(true);
+		expect(selectAll().checked).toBe(false);
+		expect(selectAll().indeterminate).toBe(false);
+	});
+
 	it('keeps other drafts and Close usable, preserving edits, focus and selection after submit', async () => {
 		const gate = deferred();
 		const write = manager.writeReviewedEntry.bind(manager);
@@ -77,7 +138,14 @@ describe('review window during slow vault writes', () => {
 		expect(second.querySelector('fieldset')!.disabled).toBe(false);
 		expect(button('Close').disabled).toBe(false);
 		expect(button('Submitting').disabled).toBe(true);
-		select(second);
+		expect(selectAll().disabled).toBe(false);
+		expect(selectAll().checked).toBe(false);
+		expect(selectAll().indeterminate).toBe(false);
+		selectAll().click();
+		selectAll().click();
+		expect(first.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+		expect(second.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(false);
+		selectAll().click();
 		second.querySelector('textarea')!.focus();
 		edit(second, 'Edited while the other entry submits');
 		gate.resolve();
@@ -85,6 +153,7 @@ describe('review window during slow vault writes', () => {
 		expect(cards()[0]).toBe(second);
 		expect(document.activeElement).toBe(second.querySelector('textarea'));
 		expect(second.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
+		expect(selectAll().checked).toBe(true);
 		await vi.waitFor(async () => expect(parseSuggestion(await read(2))?.description).toBe('Edited while the other entry submits'));
 		expect(parseSuggestion(await read(1))?.status).toBe('applied');
 	});

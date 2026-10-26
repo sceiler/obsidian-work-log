@@ -3,6 +3,7 @@
 .work-log-review-modal { width: 900px; max-width: 95vw; max-height: 90vh; }
 .work-log-review-modal .modal-content { display: flex; flex-direction: column; max-height: calc(90vh - 64px); min-height: 0; overflow: hidden; }
 .work-log-review-status { cursor: pointer; }
+.work-log-review-select-all { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; margin-bottom: 0.75rem; }
 .work-log-review-list { display: grid; gap: 1rem; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 .work-log-review-card { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 1rem; }
 .work-log-review-heading { font-weight: 600; margin-bottom: 0.5rem; }

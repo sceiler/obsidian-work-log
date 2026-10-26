@@ -8,6 +8,7 @@ interface ReviewCard {
 	file: SuggestionFile;
 	draft: SuggestionEdit;
 	selected: boolean;
+	checkbox: HTMLInputElement;
 	saving: Promise<void>;
 	pendingEdit?: SuggestionEdit;
 	busy: boolean;
@@ -23,6 +24,7 @@ export class ReviewModal extends Modal {
 	private submitting = false;
 	private closed = false;
 	private submitButton?: HTMLButtonElement;
+	private selectAllCheckbox?: HTMLInputElement;
 	private message?: HTMLElement;
 	constructor(app: App, private inbox: ReviewInbox, private settings: WorkLogSettings, private done: () => void) { super(app); }
 
@@ -56,6 +58,18 @@ export class ReviewModal extends Modal {
 		}
 		const active = scan.entries.filter(item => item.suggestion.status === 'pending' || item.suggestion.status === 'applying');
 		if (!active.length) this.contentEl.createEl('p', { text: 'No suggestions waiting for review. Run $work-log-review in Codex to prepare a batch.' });
+		const selectAllLabel = this.contentEl.createEl('label', { cls: 'work-log-review-select-all' });
+		const selectAll = selectAllLabel.createEl('input', { type: 'checkbox' });
+		this.selectAllCheckbox = selectAll;
+		selectAllLabel.createSpan({ text: 'Select all suggestions' });
+		selectAll.onchange = () => {
+			for (const card of this.cards) {
+				if (card.busy) continue;
+				card.selected = selectAll.checked;
+				card.checkbox.checked = card.selected;
+			}
+			this.updateSubmit();
+		};
 		const list = this.contentEl.createDiv({ cls: 'work-log-review-list' });
 		for (const file of active) this.renderCard(list, file);
 		const footer = this.contentEl.createDiv({ cls: 'work-log-review-footer' });
@@ -78,7 +92,7 @@ export class ReviewModal extends Modal {
 		const card: ReviewCard = {
 			file, draft: { title: suggestion.title, date: suggestion.date, category: suggestion.category,
 				related_notes: [...suggestion.related_notes], description: suggestion.description },
-			selected: false, saving: Promise.resolve(), busy: false, error: '', status, element: cardEl, fields
+			selected: false, checkbox, saving: Promise.resolve(), busy: false, error: '', status, element: cardEl, fields
 		};
 		this.cards.push(card);
 		checkbox.onchange = () => { card.selected = checkbox.checked; this.updateSubmit(); };
@@ -179,8 +193,14 @@ export class ReviewModal extends Modal {
 	}
 
 	private updateSubmit(): void {
+		const selectable = this.cards.filter(card => !card.busy);
+		const count = selectable.filter(card => card.selected).length;
+		if (this.selectAllCheckbox) {
+			this.selectAllCheckbox.checked = selectable.length > 0 && count === selectable.length;
+			this.selectAllCheckbox.indeterminate = count > 0 && count < selectable.length;
+			this.selectAllCheckbox.disabled = !selectable.length;
+		}
 		if (!this.submitButton) return;
-		const count = this.cards.filter(card => card.selected && !card.busy).length;
 		this.submitButton.textContent = this.submitting ? 'Submitting entries…' : `Submit selected entries (${count})`;
 		this.submitButton.disabled = !count || this.submitting;
 	}
@@ -188,9 +208,10 @@ export class ReviewModal extends Modal {
 	private setBusy(card: ReviewCard, busy: boolean): void {
 		card.busy = busy;
 		card.fields.disabled = busy || card.file.suggestion.status !== 'pending';
-		card.element.querySelector<HTMLInputElement>('input[type="checkbox"]')!.disabled = busy;
+		card.checkbox.disabled = busy;
 		const dismiss = card.element.querySelector<HTMLButtonElement>(':scope > button')!;
 		dismiss.disabled = card.fields.disabled;
+		this.updateSubmit();
 	}
 
 	private async submit(): Promise<void> {
