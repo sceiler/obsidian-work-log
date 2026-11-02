@@ -1,0 +1,386 @@
+/* Work Log Plugin Styles */
+
+.work-log-review-modal { width: 900px; max-width: 95vw; max-height: 90vh; }
+.work-log-review-modal .modal-content { display: flex; flex-direction: column; max-height: calc(90vh - 64px); min-height: 0; overflow: hidden; }
+.work-log-review-status { cursor: pointer; }
+.work-log-review-select-all { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; margin-bottom: 0.75rem; }
+.work-log-review-list { display: grid; gap: 1rem; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.work-log-review-card { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 1rem; }
+.work-log-review-heading { font-weight: 600; margin-bottom: 0.5rem; }
+.work-log-review-heading label { display: flex; align-items: center; gap: 0.5rem; }
+.work-log-review-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.work-log-review-fields label { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+.work-log-review-row { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem; }
+.work-log-review-text { width: 100%; min-height: 100px; resize: vertical; font-family: var(--font-text); line-height: 1.5; }
+.work-log-review-destination { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0.35rem 0; overflow-wrap: anywhere; }
+.work-log-review-destinations { margin-bottom: 0.75rem; }
+.work-log-review-sources { margin: 0.75rem 0; }
+.work-log-review-save-status { color: var(--text-muted); font-size: var(--font-ui-small); min-height: 1.5em; margin-bottom: 0.5rem; }
+.work-log-review-footer { display: flex; flex-wrap: wrap; flex-shrink: 0; justify-content: flex-end; gap: 0.5rem; padding: 1rem 0 0; background: var(--background-primary); border-top: 1px solid var(--background-modifier-border); margin-top: 1rem; }
+.work-log-review-remove { margin-right: auto; }
+.work-log-review-message { white-space: pre-wrap; margin-bottom: 0.75rem; }
+.work-log-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Target the modal container for size */
+.work-log-modal-container {
+	width: 900px;
+	max-width: 95vw;
+}
+
+.work-log-modal-container .modal-content {
+	width: 100%;
+}
+
+.work-log-modal {
+	padding: 0.75rem;
+}
+
+.work-log-modal h2 {
+	margin-bottom: 0.75rem;
+	font-size: 1.1rem;
+}
+
+/* Date Section */
+.work-log-date-section {
+	margin-bottom: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.work-log-date-label {
+	font-weight: 600;
+	margin-bottom: 0.25rem;
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+
+.work-log-date-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.work-log-quick-dates {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.work-log-date-btn {
+	padding: 0.25rem 0.75rem;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	border: none;
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: background 0.15s ease;
+}
+
+.work-log-date-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.work-log-date-btn-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.work-log-date-btn-active:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.work-log-date-input {
+	padding: 0.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.work-log-date-display {
+	margin-top: 0.25rem;
+	color: var(--text-muted);
+	font-size: 0.8rem;
+}
+
+/* Shortcut Hint */
+.work-log-shortcut-hint {
+	margin-left: 0.5rem;
+	font-size: 0.75rem;
+	opacity: 0.7;
+}
+
+/* Validation Error Message */
+.work-log-error-msg {
+	color: var(--text-error);
+	font-size: 0.8rem;
+	margin-top: 0.25rem;
+}
+
+/* Related Note Existence Indicator */
+.work-log-note-status {
+	font-size: 0.75rem;
+	margin-top: 0.15rem;
+}
+
+.work-log-note-status.is-found {
+	color: var(--text-success, var(--interactive-accent));
+}
+
+.work-log-note-status.is-missing {
+	color: var(--text-warning, var(--text-error));
+}
+
+/* Description Field */
+.work-log-description {
+	width: 100% !important;
+	min-height: 100px;
+	resize: vertical;
+	box-sizing: border-box;
+}
+
+.work-log-description.work-log-error {
+	border-color: var(--text-error) !important;
+	animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+	0%, 100% { transform: translateX(0); }
+	25% { transform: translateX(-5px); }
+	75% { transform: translateX(5px); }
+}
+
+/* Auto-link note */
+.work-log-autolink-note {
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	margin-top: 0.25rem;
+	font-style: italic;
+}
+
+/* Buttons */
+.work-log-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.work-log-buttons button {
+	padding: 0.35rem 1rem;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.85rem;
+}
+
+/* Settings */
+.work-log-modal .setting-item {
+	border-top: none;
+	padding: 0.35rem 0;
+}
+
+.work-log-modal .setting-item-info {
+	flex: 1;
+}
+
+.work-log-modal .setting-item-control {
+	flex-shrink: 0;
+}
+
+.work-log-modal .setting-item-control input[type="text"],
+.work-log-modal .setting-item-control select {
+	width: 200px;
+}
+
+/* Make description setting full width */
+.work-log-modal .setting-item:has(.work-log-description) {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.work-log-modal .setting-item:has(.work-log-description) .setting-item-control {
+	width: 100%;
+}
+
+.work-log-modal .setting-item:has(.work-log-description) textarea {
+	width: 100% !important;
+}
+
+.work-log-modal textarea {
+	font-family: var(--font-text);
+	font-size: 0.9rem;
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+/* Related Note Field */
+.work-log-related-note-input {
+	width: 100%;
+}
+
+.work-log-related-note-info {
+	color: var(--text-muted);
+	font-size: 0.7rem;
+	margin-top: 0.15rem;
+	margin-bottom: 0.5rem;
+	font-style: italic;
+}
+
+/* Suggest Dropdown */
+.work-log-suggest-item {
+	padding: 0.5rem 0.75rem;
+}
+
+.work-log-suggest-name {
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.work-log-suggest-path {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	margin-top: 0.15rem;
+}
+
+/* Category management in settings */
+.work-log-category-container {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.work-log-category-container .setting-item {
+	border-top: none;
+	padding: 0.25rem 0;
+}
+
+.work-log-add-category-form {
+	border: 1px solid var(--interactive-accent);
+	border-radius: 6px;
+	padding: 0.75rem;
+	margin-top: 0.5rem;
+	background: var(--background-secondary);
+}
+
+.work-log-add-category-form .setting-item {
+	border-top: none;
+	padding: 0.25rem 0;
+}
+
+/* ============ Task Modal ============ */
+
+/* Priority Section */
+.work-log-priority-section {
+	margin-bottom: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+}
+
+.work-log-priority-label {
+	font-weight: 600;
+	margin-bottom: 0.25rem;
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+
+.work-log-priority-toggles {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.25rem;
+}
+
+.work-log-priority-btn {
+	padding: 0.3rem 1rem;
+	border-radius: 20px;
+	background: var(--background-modifier-border);
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	font-size: 0.85rem;
+	transition: all 0.15s ease;
+	color: var(--text-muted);
+}
+
+.work-log-priority-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.work-log-priority-btn.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
+.work-log-priority-btn.is-active:hover {
+	background: var(--interactive-accent-hover);
+}
+
+.work-log-quadrant-label {
+	margin-top: 0.25rem;
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.work-log-urgency-hint {
+	font-size: 0.75rem;
+	color: var(--text-warning, var(--text-accent));
+	margin-top: 0.15rem;
+	min-height: 1em;
+}
+
+/* Due Date Section */
+.work-log-due-date-section {
+	margin-bottom: 0.5rem;
+	padding: 0.35rem 0;
+}
+
+/* Natural Language Date Input */
+.work-log-nl-date-row {
+	margin-bottom: 0.35rem;
+}
+
+.work-log-nl-date-input {
+	width: 100%;
+	padding: 0.4rem 0.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.85rem;
+}
+
+.work-log-nl-date-input:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.work-log-nl-date-status {
+	font-size: 0.75rem;
+	margin-top: 0.15rem;
+	min-height: 1em;
+}
+
+.work-log-nl-date-status.is-parsed {
+	color: var(--text-success, var(--interactive-accent));
+}
+
+.work-log-nl-date-status.is-error {
+	color: var(--text-error);
+}
+
+.work-log-due-date-section .work-log-quick-dates {
+	margin-bottom: 0.35rem;
+}
+
+.work-log-due-date-input {
+	padding: 0.5rem;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
